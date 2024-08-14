@@ -13,7 +13,7 @@
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
 
-\title{Decoding the Amplitude of the DCF77 Longwave Time Signal by using the Goertzel Algorithm}
+\title{Decoding the Amplitude-Modulated Part the DCF77 Longwave Time Signal by using the Goertzel Algorithm}
 
 \author{\IEEEauthorblockN{1\textsuperscript{st} Leander Hackmann}
 \IEEEauthorblockA{\textit{Master Embedded Systems Engineering} \\
@@ -25,16 +25,29 @@ Mat.-Nr.: 7217912, leander.hackmann001@stud.fh-dortmund.de}
 \maketitle
 
 \begin{abstract}
-This document is a model and instructions for \LaTeX.
-This and the IEEEtran.cls file define the components of your paper [title, text, heads, etc.]. *CRITICAL: Do Not Use Symbols, Special Characters, Footnotes, 
-or Math in Paper Title or Abstract.
+    The DCF77, a long wave time signal transmitter that is located near Frankfurt am Main in Germany, is the primary source of time information for
+    radio-controlled clocks in Europe. Its signal consists of a phase and an amplitude-modulated part, both containing the time information.
+    Devices that use the signal usually consist of an amplitude modulation long wave receiver, often realized by using a dedicated integrated circuit, and an
+    application processor. In this paper, a novel approach for the demodulation of the amplitude-modulated part of the signal, without the need for specialized
+    analog cicruitry and only a minimal amount of simple hardware components, is presented.
+    This is done by utilizing direct-sampling software-defined radio techniques together with leveraging the efficiency of the Goertzel algorithm.
+    As a result, the presented approach removes the need for most of the usually employed analog circuitry, leaving only a front-end amplifier, and
+    effectively proposes a new type of design where the receiver is implemented inside the application processor.
+    The employed lightweight algorithms keep it realizable on a system with limited resources, which is shown in an example implementation on a Arm Cortex-M3 microcontroller. 
 \end{abstract}
 
 \begin{IEEEkeywords}
-DCF77, Goertzel, Time Signal, Decoding, Longwave
+DCF77, SDR, Goertzel, DSP, Time Signal
 \end{IEEEkeywords}
 
 \section{Introduction}
+    %End-user devices usually make use of the amplitude-modulated part of this signal by utilizing specialized ICs
+    %together with big ferrite-rod antennas for obtaining the time signal. This signal then needs further hardware, often in form of microcontrollers,
+    %to be used in the application. With increasing availability 
+    
+    %The demodulation and decoding of the amplitude and phase-modulated signal in the end-user devices
+    %is usually done by using specialized ICs together with ferrite-rod antennas. With increasing availability of cheap In this paper, a n
+
 This document is a model and instructions for \LaTeX.
 Please observe the conference page limits. For more information about how to become an IEEE Conference author or how to write your paper, please visit   IEEE Conference Author Center website: https://conferences.ieeeauthorcenter.ieee.org/.
 
