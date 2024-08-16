@@ -9,6 +9,10 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc,patterns,patterns.meta}
+\usepackage{siunitx}  
+\sisetup{locale = US}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
@@ -28,7 +32,7 @@ Mat.-Nr.: 7217912, leander.hackmann001@stud.fh-dortmund.de}
     The DCF77, a long wave time signal transmitter that is located near Frankfurt am Main in Germany, is the primary source of time information for
     radio-controlled clocks in Europe. Its signal consists of a phase and an amplitude-modulated part, both containing the time information.
     Devices that use the signal usually consist of an amplitude modulation long wave receiver, often realized by using a dedicated integrated circuit, and an
-    application processor. In this paper, a novel approach for the demodulation of the amplitude-modulated part of the signal, without the need for specialized
+    application processor. In this paper, an alternative approach for the demodulation of the amplitude-modulated part of the signal, without the need for specialized
     analog cicruitry and only a minimal amount of simple hardware components, is presented.
     This is done by utilizing direct-sampling software-defined radio techniques together with leveraging the efficiency of the Goertzel algorithm.
     As a result, the presented approach removes the need for most of the usually employed analog circuitry, leaving only a front-end amplifier, and
@@ -37,11 +41,76 @@ Mat.-Nr.: 7217912, leander.hackmann001@stud.fh-dortmund.de}
 \end{abstract}
 
 \begin{IEEEkeywords}
-DCF77, SDR, Goertzel, DSP, Time Signal
+    DCF77, Goertzel, Digital Signal Processing, Time Signal, Software Defined Radio
 \end{IEEEkeywords}
 
 \section{Introduction}
-    %End-user devices usually make use of the amplitude-modulated part of this signal by utilizing specialized ICs
+\begin{figure}[!h]
+    \centering
+    \resizebox{0.48\textwidth}{!}{
+        \begin{tikzpicture}
+            \clip (-11.5,-1) rectangle + (23,5); %Clipping: where to start, shape and size
+            
+            \coordinate (fc) at (7.75,0);
+            \coordinate (fs) at (2.4,0);
+            
+            %Axes
+            \draw[->, very thick] (-11,0) -- (11,0) node[right] {f};
+            \draw[->, very thick] (0,-1) -- (0,3) node[above] {Amplitude};
+            
+            %DCF77 at f_c
+            \draw[thick, pattern={Dots[angle=45,distance={1.25pt/sqrt(2)}]}, pattern color=blue]
+            ($(fc) + (-0.12,0)$) -- % Left line start
+            ++(0,1) -- %Left line up
+            ++(0.24,0.5) -- %Roof
+            ++(0,-1.5) -- %Right line down
+            cycle; % Close the shape
+            \draw[very thick] ($(fc) + (0, -0.2)$) -- ++(0, 0.4); %Line x-axis
+            \node at ($(fc) + (0, -0.8)$) {$f_{c}$}; %Index x-axis
+            \draw[<->] ($(fc) + (-0.12,1.75)$) -- ++(0.24,0) node[midway, above] {$B$}; %Bandwidth
+
+            %DCF77 at f_c
+            \draw[thick, pattern={Dots[angle=45,distance={1.25pt/sqrt(2)}]}, pattern color=blue]
+            ($-1*(fc) + (-0.12,0)$) -- % Left line start
+            ++(0,1.5) -- %Left line up
+            ++(0.24,-0.5) -- %Roof
+            ++(0,-1) -- %Right line down
+            cycle; % Close the shape
+            \draw[very thick] ($-1*(fc) + (0, -0.2)$) -- ++(0, 0.4); %Line x-axis
+            \node at ($-1*(fc) + (0, -0.8)$) {$-f_{c}$}; %Index x-axis
+            \draw[<->] ($-1*(fc) + (-0.12,1.75)$) -- ++(0.24,0) node[midway, above] {$B$}; %Bandwidth
+
+            %f_s and their multiples
+            \foreach \x in {-3,-2,-1,1,2,3}{
+                \draw[-> , thick] ($\x*(fs)$) -- ++(0,1.5);
+                \draw[very thick] ($\x*(fs) + (0,-0.2)$) -- ++(0,0.4);
+                \node at ($\x*(fs) + (0,-0.4)$) {$\x f_{s}$};
+                
+                
+                \draw[thick]
+                ($(fc) + (-0.12,0) + \x*(fs)$) -- % Left line start
+                ++(0,1) -- %Left line up
+                ++(0.24,0.5) -- %Roof
+                ++(0,-1.5) -- %Right line down
+                cycle; % Close the shape
+                \draw[very thick] ($(fc) + (0, -0.2) + \x*(fs)$) -- ++(0, 0.4); %Line x-axis
+                \node at ($(fc) + (0, -0.8) + \x*(fs)$) {$f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+        
+                %DCF77 at -f_c
+                \draw[thick]
+                ($-1*(fc) + (-0.12,0) + \x*(fs)$) -- % Left line start
+                ++(0,1.5) -- %Left line up
+                ++(0.24,-0.5) -- %Roof
+                ++(0,-1) -- %Right line down
+                cycle; % Close the shape
+                \draw[very thick] ($-1*(fc) + (0, -0.2) + \x*(fs)$) -- ++(0, 0.4); %Line x-axis
+                \node at ($-1*(fc) + (0, -0.8) + \x*(fs)$) {$-f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+            };
+        \end{tikzpicture}
+    } 
+\end{figure}   
+
+%End-user devices usually make use of the amplitude-modulated part of this signal by utilizing specialized ICs
     %together with big ferrite-rod antennas for obtaining the time signal. This signal then needs further hardware, often in form of microcontrollers,
     %to be used in the application. With increasing availability 
     
