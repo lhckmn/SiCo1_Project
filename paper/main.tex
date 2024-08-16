@@ -12,7 +12,7 @@
 \usepackage{placeins}
 
 \usepackage{tikz}
-\usetikzlibrary{calc,patterns,patterns.meta}
+\usetikzlibrary{calc, patterns, patterns.meta, shapes.geometric, arrows.meta, positioning, fit}
 
 \usepackage{siunitx} 
 \sisetup{locale = US}
@@ -121,7 +121,44 @@ In reality, this period is usually longer because the receiver needs to adapt to
 These conditions underly a lot of influences, including temporary fading, electromagnetic noise from the close environment or varying signal strengths
 during different times of the day.
 
-\section{Principle of a DCF77 receiver}
+\section{Principle of the receiver}
+To understand the principle of the receiver, it is compared to the common structure that is used in radio controlled clocks.
+\begin{figure}[htbp]
+    \centering
+    \resizebox{0.48\textwidth}{!}{
+        \begin{tikzpicture}
+            % Block styles
+            \tikzstyle{block} = [rectangle, draw, text width=4.5em, text centered, minimum width=6em, minimum height=4em]
+            \tikzstyle{block_dashed} = [rectangle, draw, text width=2em, text centered, minimum width=4em, minimum height=4em, dashed]
+            % Input and output
+            \begin{scope}[shift={(-3,0)}] % Adjust the position of the antenna
+                \coordinate (antenna) at (0,0);
+                \draw[thick] (0,0) -- (0,1); % Antenna pole
+                \draw[thick] (-0.25,1) -- (0,0.75); % Antenna horizontal line
+                \draw[thick] (0.25,1) -- (0,0.75); % Antenna horizontal line
+            \end{scope}
+            \node[block, right=of antenna, minimum width=4em, minimum height=4em] (bpf) {BPF};
+            \node[block, right=of bpf] (rfamp) {RF Amp};
+            \node[block, right=of rfamp] (adc) {ADC};
+            \node[block, below=of adc] (timer) {Timer};
+            \node[block, right=of adc] (goertzel) {Goertzel Algorithm};
+            \node[block, right=of goertzel] (det) {Detector};
+            % Connections
+            \draw[thick] (antenna) -- (bpf);
+            \draw[->] (bpf) -- (rfamp); % Connection from antenna to RF amplifier
+            \draw[->] (rfamp) -- (adc);
+            \draw[->] (timer) -- (adc);
+            \draw[->] (adc) -- (goertzel);
+            \draw[->] (goertzel) -- (det);
+
+            \node[draw, dashed, fit={(antenna) (bpf)}, inner sep=12pt] (tank_circuit) {};
+            \node[below=0.5em of tank_circuit, align=center] {Tuned Tank Circuit};
+        \end{tikzpicture}
+    }
+\end{figure}
+\FloatBarrier\noindent
+Test
+
 \begin{figure*}[!htbp]
     \centering
     \resizebox{0.9\textwidth}{!}{
@@ -397,9 +434,5 @@ citation first, followed by the original foreign-language citation \cite{b6}.
 %\bibitem{b10} ``Treatment episode data set: discharges (TEDS-D): concatenated, 2006 to 2009.'' U.S. Department of Health and Human Services, Substance Abuse and Mental Health Services Administration, Office of Applied Studies, August, 2013, DOI:10.3886/ICPSR30122.v2
 %\bibitem{b11} K. Eves and J. Valasek, ``Adaptive control for singularly perturbed systems examples,'' Code Ocean, Aug. 2023. [Online]. Available: https://codeocean.com/capsule/4989235/tree
 \end{thebibliography}
-
-\vspace{12pt}
-\color{red}
-IEEE conference templates contain guidance text for composing and formatting conference papers. Please ensure that all template text is removed from your conference paper prior to submission to the conference. Failure to remove the template text from your paper may result in your paper not being published.
 
 \end{document}
