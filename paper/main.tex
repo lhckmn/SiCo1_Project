@@ -9,14 +9,19 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{placeins}
+
 \usepackage{tikz}
 \usetikzlibrary{calc,patterns,patterns.meta}
-\usepackage{siunitx}  
-\usepackage{placeins}
+
+\usepackage{siunitx} 
 \sisetup{locale = US}
+\DeclareSIUnit{\Bit}{Bit}
+
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
-\begin{document}
+
+    \begin{document}
 
 \title{Decoding the Amplitude-Modulated Part the DCF77 Longwave Time Signal by using the Goertzel Algorithm}
 
@@ -57,7 +62,7 @@ with simple technical equipment \cite{b2}.
 \begin{figure}[!htbp]
     \centerline{\includegraphics[width=0.3\textwidth]{img/dcf77_range.jpg}}
     \caption{Coverage of the DCF77 signal. Adapted from \cite{b1}}
-    \label{fig:upchirp}
+    \label{fig:dcf77_range}
 \end{figure}
 \FloatBarrier
 End-user devices usually make use of the amplitude-modulated part of the signal by using an amplitude modulation receiver, often a by employing specialized integrated circuit,
@@ -87,13 +92,39 @@ amplitude-modulated part it is still well below \SI{1}{\second}, being \SI{100}{
 When using the phase-modulated part, a standard deviation of \SIrange{\pm 2}{\pm 22}{\micro\second} from the atomic clock to the receving device can be observed \cite{b4}.
 \par
 As the amplitude-modulated part allows simplistic receiver designs through its straightfoward modulation scheme, it is used in the principle presented in this paper
-and a focus is put on explaining this part of the DCF77 signal. 
-
+and therefore a focus is put on explaining this part of the DCF77 signal.
+The time information, represented as a series of binary symbols, is modulated onto the carrier with a frequency of \SI{77.5}{\kilo\hertz} by using
+Amplitude-Shift Keying (ASK). Every symbol has the duration of exactly \SI{1}{\second}, with a part that is either \SI{100}{\milli\second} or \SI{200}{\milli\second}
+long where it has a value to zero.
+This the duration of this "gap" is used to encode respectively a 0 or a 1 and effectively switches the strength of the carrier between \SI{15}{\percent} and \SI{100}{\percent} \cite{b5}.
+\begin{figure}[htbp]
+    \centerline{\includegraphics[width=0.45\textwidth]{img/dcf77_symbol_encoding.png}}
+    \caption{Symbol encoding of the DCF77 signal. From \cite{b1}}
+    \label{fig:dcf77_symbol_encoding}
+\end{figure}
+\FloatBarrier\noindent
+To allow the detection of a new minute, the gap is left out between the last (59) second of the ongoing and the first (0) second of the next minute.
+By using this scheme, a dataframe consisting out \SI{59}{\Bit}, starting at second one, can be transmitted every minute.
+Bit \SIrange{0}{19}{} are used to send encrypted weather data, to notify the PTB in case of errors in the transmitter, to announce an upcoming
+switch to or from Daylight Saving Time (DST), to show if DST is currently enabled or not, and to announce an upcoming leap second \cite{b5}.
+As the decryption of the weather date requires a specialized third-party integrated circuit and the notification bit is only important for the PTB, these parts
+of the frame are discarded by most applications.
+The leftover Bits \SIrange{20}{58}{} are used to represent the current time and date in Binary Coded Decimal (BCD) format, including parity bits for recognizing errors.
+\begin{figure}[htbp]
+    \centerline{\includegraphics[width=0.35\textwidth]{img/dcf77_frame_encoding.jpg}}
+    \caption{Data frame encoding of the DCF77 signal. From \cite{b5}}
+    \label{fig:dcf77_data_encoding}
+\end{figure}
+\FloatBarrier\noindent
+This means that a receiver needs to run at least for \SI{39}{\second} after powerup to receive one whole block containing the current time information.
+In reality, this period is usually longer because the receiver needs to adapt to the current receiving conditions. 
+These conditions underly a lot of influences, including temporary fading, electromagnetic noise from the close environment or varying signal strengths
+during different times of the day.
 
 \section{Principle of a DCF77 receiver}
-\begin{figure}[!h]
+\begin{figure*}[!htbp]
     \centering
-    \resizebox{0.48\textwidth}{!}{
+    \resizebox{0.9\textwidth}{!}{
         \begin{tikzpicture}
             \clip (-11.5,-1) rectangle + (23,5); %Clipping: where to start, shape and size
             
@@ -154,7 +185,7 @@ and a focus is put on explaining this part of the DCF77 signal.
             };
         \end{tikzpicture}
     } 
-\end{figure}   
+\end{figure*}   
 
 
 \subsection{Maintaining the Integrity of the Specifications}
@@ -313,12 +344,6 @@ copy& More table copy$^{\mathrm{a}}$& &  \\
 \end{center}
 \end{table}
 
-\begin{figure}[htbp]
-\centerline{\includegraphics{img/fig1.png}}
-\caption{Example of a figure caption.}
-\label{fig}
-\end{figure}
-
 Figure Labels: Use 8 point Times New Roman for Figure labels. Use words 
 rather than symbols or abbreviations when writing Figure axis labels to 
 avoid confusing the reader. As an example, write the quantity 
@@ -358,11 +383,11 @@ For papers published in translation journals, please give the English
 citation first, followed by the original foreign-language citation \cite{b6}.
 
 \begin{thebibliography}{00}
-\bibitem{b1} -, ``DCF77,'' 2023, Wikipedia entry. [Online]. Available: https://de.wikipedia.org/wiki/DCF77
+\bibitem{b1} -, ``DCF77,'' 2024, Wikipedia entry. [Online]. Available: https://de.wikipedia.org/wiki/DCF77
 \bibitem{b2} D. Priester and P. Hetzel and A. Bauch, ``Zeit- und Normalfrequenzverbreitung mit DCF77,'' PTB Mitteilungen, 2004, [Online]. Available: https://www.ptb.de/cms/fileadmin/internet/fachabteilungen/abteilung\_4/4.4\_zeit\_und\_frequenz/4.42/dcf77.pdf
 \bibitem{b3} D. Priester and P. Hetzel and A. Bauch, ``Zeit- und Normalfrequenzverbreitung mit DCF77: 1959-2009 und darüber hinaus,'' PTB Mitteilungen, 2009, [Online]. Available: https://www.ptb.de/cms/fileadmin/internet/fachabteilungen/abteilung\_4/4.4\_zeit\_und\_frequenz/pdf/2009\_Bauch\_PTBM\_\_DCF77.pdf
 \bibitem{b4} P. Hetzel, ``Time dissemination via the LF transmitter DCF77 using a pseudo-random phase-shift keying of the carrier,'' PTB Braunschweig, 1988, [Online]. Available: https://www.ptb.de/cms/fileadmin/internet/fachabteilungen/abteilung\_4/4.4\_zeit\_und\_frequenz/pdf/5\_1988\_Hetzel\_-\_Proc\_EFTF\_88.pdf
-
+\bibitem{b5} -, ``DCF77 webpage,'' 2024, Official page of the PTB [Online]. Available: https://www.ptb.de/cms/en/ptb/fachabteilungen/abt4/fb-44/ag-442/dissemination-of-legal-time/dcf77.html
 %\bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
 %\bibitem{b4} K. Elissa, ``Title of paper if known,'' unpublished.
 %\bibitem{b5} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
