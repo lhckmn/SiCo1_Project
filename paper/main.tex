@@ -14,6 +14,8 @@
 \usepackage{tikz}
 \usetikzlibrary{calc, patterns, patterns.meta, shapes.geometric, arrows.meta, positioning, fit}
 
+\usepackage{ifthen}
+
 \usepackage{siunitx} 
 \sisetup{locale = US}
 \DeclareSIUnit{\Bit}{Bit}
@@ -92,7 +94,7 @@ amplitude-modulated part it is still well below \SI{1}{\second}, being \SI{100}{
 When using the phase-modulated part, a standard deviation of \SIrange{\pm 2}{\pm 22}{\micro\second} from the atomic clock to the receving device can be observed \cite{b4}.
 \par
 As the amplitude-modulated part allows simplistic receiver designs through its straightfoward modulation scheme, it is used in the principle presented in this paper
-and therefore a focus is put on explaining this part of the DCF77 signal.
+and therefore a focus is put on explaining this part of the DCF77 signal. The following explainations in this paper therefore refer explicitly to the amplitude-modulated part.
 The time information, represented as a series of binary symbols, is modulated onto the carrier with a frequency of \SI{77.5}{\kilo\hertz} by using
 Amplitude-Shift Keying (ASK). Every symbol has the duration of exactly \SI{1}{\second}, with a part that is either \SI{100}{\milli\second} or \SI{200}{\milli\second}
 long where it has a value to zero.
@@ -122,7 +124,91 @@ These conditions underly a lot of influences, including temporary fading, electr
 during different times of the day.
 
 \section{Principle of the receiver}
-To understand the principle of the receiver, it is compared to the common structure that is used in radio controlled clocks.
+As the seen in the description of the DCF77 signal, retrieving the the binary time signal from the amplitude-modulated part is more or less trivial.
+Conventional applications execute this task by using analog receiving circuits, usually by using a simple amplitude modulation receiver together with a
+tuned ferrite-rod antenna, acting as a Bandpass Filter (BPF), to filter out the irrelevant part of the spectrum. 
+Moving the receiver into the digital domain allows for more advanced techniques to retrieve this binary time signal, rather than demodulating the signal with a
+diode-detector inside the amplitude modulation receiver.
+Because the information is contained only in the amplitude of the signal, and therefore inside the signal strength at the receiver, it can also be obtained by doing a
+continuous analysis of the spectrum at the carrier's frequency of \SI{77.5}{\kilo\hertz}.
+\subsection{The Goertzel Algorithm}
+The standard approach to analyze a spectrum in the digital domain after sampling is the well-known Discrete Fourier Transform (DFT), implemented by using
+the Fast Fourier Transform (FFT). This yields an analysis of the complete spectrum, producing $\frac{N}{2} + 1$ relevant results for equally distributed frequencies
+("frequency bins") within range from \SI{0}{\hertz} to $\frac{f_{s}}{2}$ where $N$ is the number of samples and $f_{s}$ the sampling frequency \cite{b6}.
+The signal strength, and therefore the binary time signal of the amplitude-modulated part can then be examined by observing the value of the curresponding frequency bin
+over time. Because of only one frequency bin being relevant, it is obvious that a full FFT produces a lot of overhead and redundant calculation operations in this use-case. 
+This overhead can be avoided by using the Goertzel algorithm instead of the FFT, which is able to calculate the value of one specific frequency bin with a smaller
+amount of needed calculations.
+It was invented in 1958 by Gerald Goertzel and since then most commonly used in the detection tones employed in Dual-tone Multi-frequency (DTMF) signaling \cite{b7}.
+The working principle of the algorithm can be percieved as a second-order Infinite Impulse Response (IIR) filter where the results $y[n-1]$ and $y[n-2]$ of the output
+are stored in states $Q_{1}$ and $Q_{2}$, so they are still available after the execution of the filter.
+\begin{equation}
+    y[n] = x[n] + 2 \cdot cos(\omega_{g}) \cdot y[n-1] - y[n-2]
+\end{equation}
+From these equations, the following structure can be derived:
+\begin{figure}[htbp]
+    \centering
+    \resizebox{0.4\textwidth}{!}{
+        \begin{tikzpicture}[auto, node distance=2cm]
+            %Defining a cross set for the multiplication elements
+            \tikzset{cross/.style={path picture={ 
+            \draw[black]
+            (path picture bounding box.south east) -- (path picture bounding box.north west) (path picture bounding box.south west) -- (path picture bounding box.north east);
+            }}}
+          
+          % Define block styles
+            \tikzstyle{delay} = [draw, rectangle, minimum height=2em, minimum width=2em]
+            \tikzstyle{sum} = [draw, circle, minimum size=2em, node distance=1.5cm]
+            \tikzstyle{mult} = [draw, circle, minimum size=2em, node distance=1.5cm, cross]
+            \tikzstyle{state} = [draw, rectangle, rounded corners, minimum height=2em, minimum width=2em]
+            
+            % Nodes
+            \node at (-2, 0) (x) {$x[n]$};
+            \node[sum] at (0,0) (sum1) {+};
+            \node[sum] at (0,-2) (sum2) {+};
+            \node[mult] at (2,-2) (mult1) {};
+            \node[mult] at (2,-4) (mult2) {};
+            \node[delay] at (4,-1) (del1) {$z^{-1}$};
+            \node[delay] at (4,-3) (del2) {$z^{-1}$};
+            \node[state] at (6,-2) (st1) {$Q_{1}$};
+            \node[state] at (6,-4) (st2) {$Q_{2}$};
+            \node at (6, 0) (y) {$y[n]$};
+
+            \draw[->] (x.east) -- (sum1.west);
+            \draw[->] (sum1.east) -- (y.west);
+            \draw[->] (sum2.north) -- (sum1.south);
+            \draw[->] (mult1.west) -- (sum2.east);
+            \draw[->] (mult2.west) -- (0, -4) -- (sum2.south);
+            \draw[->] (4, 0) -- (del1.north);
+            \draw[->] (del1.south) -- (del2.north);
+            \draw[->] (del2.south) -- (4,-4) -- (mult2.east);
+            \draw[->] (4,-2) -- (mult1.east);
+            \draw[->] (2, -1.25) -- (mult1.north);
+            \draw[->] (2, -3.25) -- (mult2.north);
+            \draw[->] (4, -2) -- (st1.west);
+            \draw[->] (4, -4) -- (st2.west);
+            \node at (2, -1) {$2 \cdot cos(\omega_{g})$};
+            \node at (2, -3) {$-1$};
+            \node[draw, shape=circle, fill=black, scale=0.3] at (4,0) {};
+            \node[draw, shape=circle, fill=black, scale=0.3] at (4,-2) {};
+            \node[draw, shape=circle, fill=black, scale=0.3] at (4,-4) {};
+        \end{tikzpicture}
+    }
+\end{figure}
+\FloatBarrier\noindent
+
+
+The constant $2 \cdot cos(\omega_{g})$ is computed before the execution. It is calculated based on $\omega_{g}$ and defines the frequency to be analyzed, dependent on the sampling frequency $f_{s}$, the
+frequency to analyze $f_{a}$ and the number of input samples $N$.
+\begin{equation}
+    k = \left\lfloor \frac{N \cdot f_{a}}{f_{s}} \right\rceil
+\end{equation}
+\begin{equation}
+    w_g = \frac{2\pi \cdot k}{N}
+\end{equation}
+
+
+
 \begin{figure}[htbp]
     \centering
     \resizebox{0.48\textwidth}{!}{
@@ -152,7 +238,10 @@ To understand the principle of the receiver, it is compared to the common struct
             \draw[->] (goertzel) -- (det);
 
             \node[draw, dashed, fit={(antenna) (bpf)}, inner sep=12pt] (tank_circuit) {};
-            \node[below=0.5em of tank_circuit, align=center] {Tuned Tank Circuit};
+            \node[below=0.3em of tank_circuit, align=center] {Tuned ferrite-rod antenna};
+
+            \node[draw, dashed, fit={(adc) (timer) (goertzel) (det)}, inner sep=12pt] (microcontroller) {};
+            \node[below=0.3em of microcontroller, align=center] {Microcontroller};
         \end{tikzpicture}
     }
 \end{figure}
@@ -194,7 +283,7 @@ Test
             \node at ($-1*(fc) + (0, -0.8)$) {$-f_{c}$}; %Index x-axis
             \draw[<->] ($-1*(fc) + (-0.12,1.75)$) -- ++(0.24,0) node[midway, above] {$B$}; %Bandwidth
 
-            %f_s and their multiples
+            %f_s their result of the convulutions
             \foreach \x in {-3,-2,-1,1,2,3}{
                 \draw[-> , thick] ($\x*(fs)$) -- ++(0,1.5);
                 \draw[very thick] ($\x*(fs) + (0,-0.2)$) -- ++(0,0.4);
@@ -208,7 +297,11 @@ Test
                 ++(0,-1.5) -- %Right line down
                 cycle; % Close the shape
                 \draw[very thick] ($(fc) + (0, -0.2) + \x*(fs)$) -- ++(0, 0.4); %Line x-axis
-                \node at ($(fc) + (0, -0.8) + \x*(fs)$) {$f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                \ifthenelse{\x = -3}{
+                    \node at ($(fc) + (0.3, -0.8) + \x*(fs)$) {$f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                }{
+                    \node at ($(fc) + (0, -0.8) + \x*(fs)$) {$f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                }
         
                 %DCF77 at -f_c
                 \draw[thick]
@@ -218,7 +311,11 @@ Test
                 ++(0,-1) -- %Right line down
                 cycle; % Close the shape
                 \draw[very thick] ($-1*(fc) + (0, -0.2) + \x*(fs)$) -- ++(0, 0.4); %Line x-axis
-                \node at ($-1*(fc) + (0, -0.8) + \x*(fs)$) {$-f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                \ifthenelse{\x = 3}{
+                    \node at ($-1*(fc) + (-0.3, -0.8) + \x*(fs)$) {$-f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                }{
+                    \node at ($-1*(fc) + (0, -0.8) + \x*(fs)$) {$-f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                }
             };
         \end{tikzpicture}
     } 
@@ -425,6 +522,8 @@ citation first, followed by the original foreign-language citation \cite{b6}.
 \bibitem{b3} D. Priester and P. Hetzel and A. Bauch, ``Zeit- und Normalfrequenzverbreitung mit DCF77: 1959-2009 und darüber hinaus,'' PTB Mitteilungen, 2009, [Online]. Available: https://www.ptb.de/cms/fileadmin/internet/fachabteilungen/abteilung\_4/4.4\_zeit\_und\_frequenz/pdf/2009\_Bauch\_PTBM\_\_DCF77.pdf
 \bibitem{b4} P. Hetzel, ``Time dissemination via the LF transmitter DCF77 using a pseudo-random phase-shift keying of the carrier,'' PTB Braunschweig, 1988, [Online]. Available: https://www.ptb.de/cms/fileadmin/internet/fachabteilungen/abteilung\_4/4.4\_zeit\_und\_frequenz/pdf/5\_1988\_Hetzel\_-\_Proc\_EFTF\_88.pdf
 \bibitem{b5} -, ``DCF77 webpage,'' 2024, Official page of the PTB [Online]. Available: https://www.ptb.de/cms/en/ptb/fachabteilungen/abt4/fb-44/ag-442/dissemination-of-legal-time/dcf77.html
+\bibitem{b6} R. G. Lyons, ``Understanding Digital Signal Processing,'' Third Edition, Prentice Hall, 2010.
+\bibitem{b7} -, ``Goertzel algorithm,'' 2024, Wikipedia entry. [Online]. Available: https://en.wikipedia.org/wiki/Goertzel\_algorithm
 %\bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
 %\bibitem{b4} K. Elissa, ``Title of paper if known,'' unpublished.
 %\bibitem{b5} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
