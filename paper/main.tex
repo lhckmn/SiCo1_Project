@@ -124,29 +124,71 @@ These conditions underly a lot of influences, including temporary fading, electr
 during different times of the day.
 
 \section{Principle of the receiver}
-As the seen in the description of the DCF77 signal, retrieving the the binary time signal from the amplitude-modulated part is more or less trivial.
+As the seen in the description of the DCF77 signal, retrieving back the binary time signal from the amplitude-modulated part is more or less trivial.
 Conventional applications execute this task by using analog receiving circuits, usually by using a simple amplitude modulation receiver together with a
 tuned ferrite-rod antenna, acting as a Bandpass Filter (BPF), to filter out the irrelevant part of the spectrum. 
 Moving the receiver into the digital domain allows for more advanced techniques to retrieve this binary time signal, rather than demodulating the signal with a
-diode-detector inside the amplitude modulation receiver.
+diode detector inside the amplitude modulation receiver.
 Because the information is contained only in the amplitude of the signal, and therefore inside the signal strength at the receiver, it can also be obtained by doing a
 continuous analysis of the spectrum at the carrier's frequency of \SI{77.5}{\kilo\hertz}.
+This task will be carried out by using the Goertzel algorithm, which is presented later.
+The structure of the whole receiver simplifies to only two external hardware parts and four internal software parts.
+
+\begin{figure}[!htbp]
+    \centering
+    \resizebox{0.48\textwidth}{!}{
+        \begin{tikzpicture}
+            % Block styles
+            \tikzstyle{block} = [rectangle, draw, text width=4.5em, text centered, minimum width=6em, minimum height=4em]
+            \tikzstyle{block_dashed} = [rectangle, draw, text width=2em, text centered, minimum width=4em, minimum height=4em, dashed]
+            % Input and output
+            \begin{scope}[shift={(-3,0)}] % Adjust the position of the antenna
+                \coordinate (antenna) at (0,0);
+                \draw[thick] (0,0) -- (0,1); % Antenna pole
+                \draw[thick] (-0.25,1) -- (0,0.75); % Antenna horizontal line
+                \draw[thick] (0.25,1) -- (0,0.75); % Antenna horizontal line
+            \end{scope}
+            \node[block, right=of antenna, minimum width=4em, minimum height=4em] (bpf) {BPF};
+            \node[block, right=of bpf] (rfamp) {RF Amp};
+            \node[block, right=of rfamp] (adc) {ADC};
+            \node[block, below=of adc] (timer) {Timer};
+            \node[block, right=of adc] (goertzel) {Goertzel Algorithm};
+            \node[block, right=of goertzel] (det) {Detector};
+            % Connections
+            \draw[thick] (antenna) -- (bpf);
+            \draw[->] (bpf) -- (rfamp); % Connection from antenna to RF amplifier
+            \draw[->] (rfamp) -- (adc);
+            \draw[->] (timer) -- (adc);
+            \draw[->] (adc) -- (goertzel);
+            \draw[->] (goertzel) -- (det);
+
+            \node[draw, dashed, fit={(antenna) (bpf)}, inner sep=12pt] (tank_circuit) {};
+            \node[below=0.3em of tank_circuit, align=center] {Tuned ferrite-rod antenna};
+
+            \node[draw, dashed, fit={(adc) (timer) (goertzel) (det)}, inner sep=12pt] (microcontroller) {};
+            \node[below=0.3em of microcontroller, align=center] {Microcontroller};
+        \end{tikzpicture}
+    }
+\end{figure}
+\FloatBarrier\noindent
+The tuned ferrite-rod antenna is kept to provide a good selectivity
+
+
 \subsection{The Goertzel Algorithm}
 The standard approach to analyze a spectrum in the digital domain after sampling is the well-known Discrete Fourier Transform (DFT), implemented by using
 the Fast Fourier Transform (FFT). This yields an analysis of the complete spectrum, producing $\frac{N}{2} + 1$ relevant results for equally distributed frequencies
 ("frequency bins") within range from \SI{0}{\hertz} to $\frac{f_{s}}{2}$ where $N$ is the number of samples and $f_{s}$ the sampling frequency \cite{b6}.
-The signal strength, and therefore the binary time signal of the amplitude-modulated part can then be examined by observing the value of the curresponding frequency bin
+The signal strength, and therefore the binary time signal of the amplitude-modulated part, can then be examined by observing the value of the curresponding frequency bin
 over time. Because of only one frequency bin being relevant, it is obvious that a full FFT produces a lot of overhead and redundant calculation operations in this use-case. 
 This overhead can be avoided by using the Goertzel algorithm instead of the FFT, which is able to calculate the value of one specific frequency bin with a smaller
 amount of needed calculations.
-It was invented in 1958 by Gerald Goertzel and since then most commonly used in the detection tones employed in Dual-tone Multi-frequency (DTMF) signaling \cite{b7}.
-The working principle of the algorithm can be percieved as a second-order Infinite Impulse Response (IIR) filter where the results $y[n-1]$ and $y[n-2]$ of the output
-are stored in states $Q_{1}$ and $Q_{2}$, so they are still available after the execution of the filter.
+It was invented in 1958 by Gerald Goertzel and since then is most commonly used in the detection tones employed in Dual-tone Multi-frequency (DTMF) signaling \cite{b7}.
+The working principle of the algorithm can be percieved as a second-order Infinite Impulse Response (IIR) filter where the results $y[n-1]$ and $y[n-2]$ of the output $y[n]$
+are stored in states $Q_{1}$ and $Q_{2}$, so they are still available after the execution of the filter:
 \begin{equation}
     y[n] = x[n] + 2 \cdot cos(\omega_{g}) \cdot y[n-1] - y[n-2]
 \end{equation}
-From these equations, the following structure can be derived:
-\begin{figure}[htbp]
+\begin{figure}[!htbp]
     \centering
     \resizebox{0.4\textwidth}{!}{
         \begin{tikzpicture}[auto, node distance=2cm]
@@ -194,12 +236,18 @@ From these equations, the following structure can be derived:
             \node[draw, shape=circle, fill=black, scale=0.3] at (4,-4) {};
         \end{tikzpicture}
     }
+    \caption{IIR representation of the Goertzel algorithm without the final calculation of the squared magnitude}
+    \label{fig:goertzel_iir}
 \end{figure}
 \FloatBarrier\noindent
-
-
-The constant $2 \cdot cos(\omega_{g})$ is computed before the execution. It is calculated based on $\omega_{g}$ and defines the frequency to be analyzed, dependent on the sampling frequency $f_{s}$, the
-frequency to analyze $f_{a}$ and the number of input samples $N$.
+The system takes the input sequence $x[n]$ with length $N$ and is executed exactly $N$ times.
+After the execution, the squared magnitude of $f_{a}$, the frequency to be analyzed, inside $x[n]$ can be calculated using the two states $Q_{1}$ and $Q_{2}$:
+\begin{equation}
+    |X(f_{a})|^2 = Q_{1}^2 + Q_{2}^2 - Q_{1} \cdot Q_{2} \cdot 2 \cdot \cos(\omega_{g})
+\end{equation}
+The constant $2 \cdot cos(\omega_{g})$, often called the "Goertzel coefficient", is calculated before the execution and used to adapt the algorithm to the frequency to be analyzed.
+The Value of $\omega_{g}$ itself is calculated based on a integer number $k$ and $N$.
+The integer number $k$ is a rounded fraction based on $N$, the frequency to be analyzed $f_{a}$, and the the sampling frequency $f_{s}$.
 \begin{equation}
     k = \left\lfloor \frac{N \cdot f_{a}}{f_{s}} \right\rceil
 \end{equation}
@@ -207,46 +255,19 @@ frequency to analyze $f_{a}$ and the number of input samples $N$.
     w_g = \frac{2\pi \cdot k}{N}
 \end{equation}
 
+\par
+Just as with the conventional FFT, the amount of needed calculations for executing the Goertzel algorithm is based on the number of samples.
+In total, $N + 1$ multiplications and $2 \cdot N + 2$ additions are needed, which can be seen from the formulas for the IIR-part and the final calculation of the squared magnitude.
+For example, a length of $N = 512$ requires in $513$ multiplications and $1026$ additions to calculate the squared magnitude of the desired frequency.
+In comparison, the typical radix-2 FFT, needs $\frac{N}{2} \cdot \log_{2}(N)$ complex multiplications and $N \cdot \log_{2}(N)$ complex additions. With $N = 512$ this would result in $2034$ complex multiplications and $4608$ complex additions.
+\par
+With this simple example, it is already visible that the Goertzel algorithm can reduce the amount of needed resources compared to a full FFT, when only one or a small amount of frequency bins should be analyzed.
+It is therefore used to observe the DCF77 signal's amplitude over time by being executed periodically.
+As the gap of the encoded symbols is eiter \SI{100}{\milli\second} or \SI{200}{\milli\second} long, the duration of the analyzation set to \SI{10}{\milli\second} to provide a good tradeoff between resolution in time and a longest possible analyzation time
+to leverage the DFT gain.
+The result is then passed to a detector to obtain the binary time signal from the analyzed
+amplitude.
 
-
-\begin{figure}[htbp]
-    \centering
-    \resizebox{0.48\textwidth}{!}{
-        \begin{tikzpicture}
-            % Block styles
-            \tikzstyle{block} = [rectangle, draw, text width=4.5em, text centered, minimum width=6em, minimum height=4em]
-            \tikzstyle{block_dashed} = [rectangle, draw, text width=2em, text centered, minimum width=4em, minimum height=4em, dashed]
-            % Input and output
-            \begin{scope}[shift={(-3,0)}] % Adjust the position of the antenna
-                \coordinate (antenna) at (0,0);
-                \draw[thick] (0,0) -- (0,1); % Antenna pole
-                \draw[thick] (-0.25,1) -- (0,0.75); % Antenna horizontal line
-                \draw[thick] (0.25,1) -- (0,0.75); % Antenna horizontal line
-            \end{scope}
-            \node[block, right=of antenna, minimum width=4em, minimum height=4em] (bpf) {BPF};
-            \node[block, right=of bpf] (rfamp) {RF Amp};
-            \node[block, right=of rfamp] (adc) {ADC};
-            \node[block, below=of adc] (timer) {Timer};
-            \node[block, right=of adc] (goertzel) {Goertzel Algorithm};
-            \node[block, right=of goertzel] (det) {Detector};
-            % Connections
-            \draw[thick] (antenna) -- (bpf);
-            \draw[->] (bpf) -- (rfamp); % Connection from antenna to RF amplifier
-            \draw[->] (rfamp) -- (adc);
-            \draw[->] (timer) -- (adc);
-            \draw[->] (adc) -- (goertzel);
-            \draw[->] (goertzel) -- (det);
-
-            \node[draw, dashed, fit={(antenna) (bpf)}, inner sep=12pt] (tank_circuit) {};
-            \node[below=0.3em of tank_circuit, align=center] {Tuned ferrite-rod antenna};
-
-            \node[draw, dashed, fit={(adc) (timer) (goertzel) (det)}, inner sep=12pt] (microcontroller) {};
-            \node[below=0.3em of microcontroller, align=center] {Microcontroller};
-        \end{tikzpicture}
-    }
-\end{figure}
-\FloatBarrier\noindent
-Test
 
 \begin{figure*}[!htbp]
     \centering
