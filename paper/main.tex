@@ -20,6 +20,9 @@
 \sisetup{locale = US}
 \DeclareSIUnit{\Bit}{Bit}
 
+\usepackage{cuted}
+\usepackage{stfloats}
+
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
@@ -132,7 +135,8 @@ diode detector inside the amplitude modulation receiver.
 Because the information is contained only in the amplitude of the signal, and therefore inside the signal strength at the receiver, it can also be obtained by doing a
 continuous analysis of the spectrum at the carrier's frequency of \SI{77.5}{\kilo\hertz}.
 This task will be carried out by using the Goertzel algorithm, which is presented later.
-The structure of the whole receiver simplifies to only two external hardware parts and four internal software parts.
+The structure of the whole receiver then simplifies to only two external hardware parts
+(besides the application processor) and four internal software parts.
 
 \begin{figure}[!htbp]
     \centering
@@ -166,13 +170,125 @@ The structure of the whole receiver simplifies to only two external hardware par
             \node[below=0.3em of tank_circuit, align=center] {Tuned ferrite-rod antenna};
 
             \node[draw, dashed, fit={(adc) (timer) (goertzel) (det)}, inner sep=12pt] (microcontroller) {};
-            \node[below=0.3em of microcontroller, align=center] {Microcontroller};
+            \node[below=0.3em of microcontroller, align=center] {Application Processor};
         \end{tikzpicture}
     }
+    \caption{Block diagram of the receiver}
+    \label{fig:block_diag_receiver}
 \end{figure}
 \FloatBarrier\noindent
-The tuned ferrite-rod antenna is kept to provide a good selectivity
+The tuned ferrite-rod antenna is kept to filter out the irrelevant spectral components, leaving only the DCF77's component at \SI{77.5}{\kilo\hertz}.
+This signal is then amplified by a RF amplifier and sampled at a certain sampling rate $f_{s}$ using the Analog to Digital Converter (ADC) of the application processsor.
+A timer producing a frequency equal to $f_{s}$ is used to trigger the sampling.
+The samples are passed to the Goertzel algorithm to analyze the amplitude of the DCF77 signal.
+The result of the analyzation is then passed to a detector to reconstruct the binary time signal.
+\par
+Before discussing the simulation of the whole reciever, the internal parts executing the sampling, the spectral analysis and the detection are explained in more detail, as they use some special techniques that should be introduced and explained beforehand.
 
+\subsection{Bandpass sampling the DCF77 signal}
+
+%Needs to be placed here so it is in the left column and then on the bottom of the page
+\begin{figure*}[b]
+    \centering
+    \resizebox{0.95\textwidth}{!}{
+        \begin{tikzpicture}
+            \clip (-11.5,-1) rectangle + (23,4); %Clipping: where to start, shape and size
+            
+            \coordinate (fc) at (7.75,0);
+            \coordinate (fs) at (2.4,0);
+            
+            %Axes
+            \draw[->, very thick] (-11,0) -- (11,0) node[right] {f};
+            \draw[->, very thick] (0,-1) -- (0,2.5) node[above] {Amplitude};
+            
+            %DCF77 at f_c
+            \draw[thick, pattern={Dots[angle=45,distance={1.25pt/sqrt(2)}]}, pattern color=blue]
+            ($(fc) + (-0.12,0)$) -- % Left line start
+            ++(0,1) -- %Left line up
+            ++(0.24,0.5) -- %Roof
+            ++(0,-1.5) -- %Right line down
+            cycle; % Close the shape
+            \draw[very thick] ($(fc) + (0, -0.2)$) -- ++(0, 0.4); %Line x-axis
+            \node at ($(fc) + (0, -0.8)$) {$f_{c}$}; %Index x-axis
+            \draw[<->] ($(fc) + (-0.12,1.75)$) -- ++(0.24,0) node[midway, above] {$B$}; %Bandwidth
+
+            %DCF77 at f_c
+            \draw[thick, pattern={Dots[angle=45,distance={1.25pt/sqrt(2)}]}, pattern color=blue]
+            ($-1*(fc) + (-0.12,0)$) -- % Left line start
+            ++(0,1.5) -- %Left line up
+            ++(0.24,-0.5) -- %Roof
+            ++(0,-1) -- %Right line down
+            cycle; % Close the shape
+            \draw[very thick] ($-1*(fc) + (0, -0.2)$) -- ++(0, 0.4); %Line x-axis
+            \node at ($-1*(fc) + (0, -0.8)$) {$-f_{c}$}; %Index x-axis
+            \draw[<->] ($-1*(fc) + (-0.12,1.75)$) -- ++(0.24,0) node[midway, above] {$B$}; %Bandwidth
+
+            %f_s their result of the convulutions
+            \foreach \x in {-3,-2,-1,1,2,3}{
+                \draw[-> , thick] ($\x*(fs)$) -- ++(0,1.5);
+                \draw[very thick] ($\x*(fs) + (0,-0.2)$) -- ++(0,0.4);
+                \node at ($\x*(fs) + (0,-0.4)$) {$\x f_{s}$};
+                
+                
+                \draw[thick]
+                ($(fc) + (-0.12,0) + \x*(fs)$) -- % Left line start
+                ++(0,1) -- %Left line up
+                ++(0.24,0.5) -- %Roof
+                ++(0,-1.5) -- %Right line down
+                cycle; % Close the shape
+                \draw[very thick] ($(fc) + (0, -0.2) + \x*(fs)$) -- ++(0, 0.4); %Line x-axis
+                \ifthenelse{\x = -3}{
+                    \node at ($(fc) + (0.3, -0.8) + \x*(fs)$) {$f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                }{
+                    \node at ($(fc) + (0, -0.8) + \x*(fs)$) {$f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                }
+        
+                %DCF77 at -f_c
+                \draw[thick]
+                ($-1*(fc) + (-0.12,0) + \x*(fs)$) -- % Left line start
+                ++(0,1.5) -- %Left line up
+                ++(0.24,-0.5) -- %Roof
+                ++(0,-1) -- %Right line down
+                cycle; % Close the shape
+                \draw[very thick] ($-1*(fc) + (0, -0.2) + \x*(fs)$) -- ++(0, 0.4); %Line x-axis
+                \ifthenelse{\x = 3}{
+                    \node at ($-1*(fc) + (-0.3, -0.8) + \x*(fs)$) {$-f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                }{
+                    \node at ($-1*(fc) + (0, -0.8) + \x*(fs)$) {$-f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
+                }
+            };
+        \end{tikzpicture}
+    }
+    \caption{Spectrum after bandpass sampling the DCF77 signal at $f_{s} = \SI{24}{\kilo\hertz}$}
+\end{figure*}
+
+Lowpass sampling is probably the most commonly used sampling technique.
+Stated by the Nyquist criterion, it requires the sampling rate $f_{s}$ to be at greater or equal to twice of the frequency of the highest frequency $f_{h}$ component in the signal to be sampled:
+\begin{equation}
+    f_{s} \geq 2 \cdot f_{h}
+\end{equation}
+Only when this condition is satisfied, the original signal can be reconstructed from the samples and it must be ensured that the signal contains no spectral elements that might violate the condition \cite{b6}.
+This is usually done by filtering the signal through a lowpass before sampling.
+\par
+Besides lowpass sampling, a signal can also be bandpass sampled if it is has a limited bandwidth $B$, defined by the frequency of the lowest spectral component $f_{l}$ and the highest spectral component $f_{h}$:
+\begin{equation}
+    B = f_{h} - f_{l}
+\end{equation}
+The center frequency $f_{c}$ is then located in the middle between $f_{l}$ and $f_{h}$:
+\begin{equation}
+    f_{c} = \frac{f_{l} + f_{h}}{2} = f_{l} + \frac{B}{2}
+\end{equation}
+Signals that fulfill this requirements can also be sampled with a lower $f_{s}$ and still be reconstructed, if special care is taken when selecting the actual value of $f_{s}$.
+The ranges of possible values for $f_{s}$ are defined by the equation
+\begin{equation}
+    \frac{2 \cdot f_{c} - B}{m} \geq f_{s} \geq \frac{2 \cdot f_{c} + B}{m + 1}
+\end{equation}
+and $f_{s} \geq 2 \cdot B$ hold true with $m$ being an arbitrary, positive integer \cite{b6}.
+During this sampling process, the signal is also shifted in frequency. This can be imagined
+by sum of convolutions of the initial spectrum with dirac delta functions, located at
+positive and negative integer multiples of $f_{s}$ \cite{b9}.
+
+Test
 
 \subsection{The Goertzel Algorithm}
 The standard approach to analyze a spectrum in the digital domain after sampling is the well-known Discrete Fourier Transform (DFT), implemented by using
@@ -184,11 +300,11 @@ This overhead can be avoided by using the Goertzel algorithm instead of the FFT,
 amount of needed calculations.
 It was invented in 1958 by Gerald Goertzel and since then is most commonly used in the detection tones employed in Dual-tone Multi-frequency (DTMF) signaling \cite{b7}.
 The working principle of the algorithm can be percieved as a second-order Infinite Impulse Response (IIR) filter where the results $y[n-1]$ and $y[n-2]$ of the output $y[n]$
-are stored in states $Q_{1}$ and $Q_{2}$, so they are still available after the execution of the filter:
+are stored in states $Q_{1}$ and $Q_{2}$, so they are still available after the execution of the filter \cite{b8}.
 \begin{equation}
     y[n] = x[n] + 2 \cdot cos(\omega_{g}) \cdot y[n-1] - y[n-2]
 \end{equation}
-\begin{figure}[!htbp]
+\begin{figure}[h]
     \centering
     \resizebox{0.4\textwidth}{!}{
         \begin{tikzpicture}[auto, node distance=2cm]
@@ -267,80 +383,6 @@ As the gap of the encoded symbols is eiter \SI{100}{\milli\second} or \SI{200}{\
 to leverage the DFT gain.
 The result is then passed to a detector to obtain the binary time signal from the analyzed
 amplitude.
-
-
-\begin{figure*}[!htbp]
-    \centering
-    \resizebox{0.9\textwidth}{!}{
-        \begin{tikzpicture}
-            \clip (-11.5,-1) rectangle + (23,5); %Clipping: where to start, shape and size
-            
-            \coordinate (fc) at (7.75,0);
-            \coordinate (fs) at (2.4,0);
-            
-            %Axes
-            \draw[->, very thick] (-11,0) -- (11,0) node[right] {f};
-            \draw[->, very thick] (0,-1) -- (0,3) node[above] {Amplitude};
-            
-            %DCF77 at f_c
-            \draw[thick, pattern={Dots[angle=45,distance={1.25pt/sqrt(2)}]}, pattern color=blue]
-            ($(fc) + (-0.12,0)$) -- % Left line start
-            ++(0,1) -- %Left line up
-            ++(0.24,0.5) -- %Roof
-            ++(0,-1.5) -- %Right line down
-            cycle; % Close the shape
-            \draw[very thick] ($(fc) + (0, -0.2)$) -- ++(0, 0.4); %Line x-axis
-            \node at ($(fc) + (0, -0.8)$) {$f_{c}$}; %Index x-axis
-            \draw[<->] ($(fc) + (-0.12,1.75)$) -- ++(0.24,0) node[midway, above] {$B$}; %Bandwidth
-
-            %DCF77 at f_c
-            \draw[thick, pattern={Dots[angle=45,distance={1.25pt/sqrt(2)}]}, pattern color=blue]
-            ($-1*(fc) + (-0.12,0)$) -- % Left line start
-            ++(0,1.5) -- %Left line up
-            ++(0.24,-0.5) -- %Roof
-            ++(0,-1) -- %Right line down
-            cycle; % Close the shape
-            \draw[very thick] ($-1*(fc) + (0, -0.2)$) -- ++(0, 0.4); %Line x-axis
-            \node at ($-1*(fc) + (0, -0.8)$) {$-f_{c}$}; %Index x-axis
-            \draw[<->] ($-1*(fc) + (-0.12,1.75)$) -- ++(0.24,0) node[midway, above] {$B$}; %Bandwidth
-
-            %f_s their result of the convulutions
-            \foreach \x in {-3,-2,-1,1,2,3}{
-                \draw[-> , thick] ($\x*(fs)$) -- ++(0,1.5);
-                \draw[very thick] ($\x*(fs) + (0,-0.2)$) -- ++(0,0.4);
-                \node at ($\x*(fs) + (0,-0.4)$) {$\x f_{s}$};
-                
-                
-                \draw[thick]
-                ($(fc) + (-0.12,0) + \x*(fs)$) -- % Left line start
-                ++(0,1) -- %Left line up
-                ++(0.24,0.5) -- %Roof
-                ++(0,-1.5) -- %Right line down
-                cycle; % Close the shape
-                \draw[very thick] ($(fc) + (0, -0.2) + \x*(fs)$) -- ++(0, 0.4); %Line x-axis
-                \ifthenelse{\x = -3}{
-                    \node at ($(fc) + (0.3, -0.8) + \x*(fs)$) {$f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
-                }{
-                    \node at ($(fc) + (0, -0.8) + \x*(fs)$) {$f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
-                }
-        
-                %DCF77 at -f_c
-                \draw[thick]
-                ($-1*(fc) + (-0.12,0) + \x*(fs)$) -- % Left line start
-                ++(0,1.5) -- %Left line up
-                ++(0.24,-0.5) -- %Roof
-                ++(0,-1) -- %Right line down
-                cycle; % Close the shape
-                \draw[very thick] ($-1*(fc) + (0, -0.2) + \x*(fs)$) -- ++(0, 0.4); %Line x-axis
-                \ifthenelse{\x = 3}{
-                    \node at ($-1*(fc) + (-0.3, -0.8) + \x*(fs)$) {$-f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
-                }{
-                    \node at ($-1*(fc) + (0, -0.8) + \x*(fs)$) {$-f_{c} \pgfmathprintnumber[print sign]{\x} f_{s}$}; %Index x-axis
-                }
-            };
-        \end{tikzpicture}
-    } 
-\end{figure*}   
 
 
 \subsection{Maintaining the Integrity of the Specifications}
@@ -544,7 +586,9 @@ citation first, followed by the original foreign-language citation \cite{b6}.
 \bibitem{b4} P. Hetzel, ``Time dissemination via the LF transmitter DCF77 using a pseudo-random phase-shift keying of the carrier,'' PTB Braunschweig, 1988, [Online]. Available: https://www.ptb.de/cms/fileadmin/internet/fachabteilungen/abteilung\_4/4.4\_zeit\_und\_frequenz/pdf/5\_1988\_Hetzel\_-\_Proc\_EFTF\_88.pdf
 \bibitem{b5} -, ``DCF77 webpage,'' 2024, Official page of the PTB [Online]. Available: https://www.ptb.de/cms/en/ptb/fachabteilungen/abt4/fb-44/ag-442/dissemination-of-legal-time/dcf77.html
 \bibitem{b6} R. G. Lyons, ``Understanding Digital Signal Processing,'' Third Edition, Prentice Hall, 2010.
+\bibitem{b9} J. Hoffmann, ``Sampling bandpass signals,'' 2021, Internet Article. [Online]. Available: https://www.dsprelated.com/showarticle/1407.php
 \bibitem{b7} -, ``Goertzel algorithm,'' 2024, Wikipedia entry. [Online]. Available: https://en.wikipedia.org/wiki/Goertzel\_algorithm
+\bibitem{b8} K. Banks, ``The Goertzel Algorithm,'' 2002, Internet Article. [Online]. Available: https://courses.cs.washington.edu/courses/cse466/12au/calendar/Goertzel-EETimes.pdf
 %\bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
 %\bibitem{b4} K. Elissa, ``Title of paper if known,'' unpublished.
 %\bibitem{b5} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
