@@ -262,9 +262,10 @@ The DCF77 signal is then, as visible in Fig. \ref{fig:dcf77_bp_spectrum}, downco
     f_{c}^{'} = f_{c} - 3 \cdot f_{s} = \SI{77.5}{\kilo\hertz} - 3 \cdot \SI{24}{\kilo\hertz} = \SI{5.5}{\kilo\hertz}
 \end{equation}
 caused by the convolution of the initial spectrum with the dirac delta impulse, located at $-3 \cdot f_{s}$. 
+The following block, the Goertzel algorithm, therefore needs to analyze the spectral component at $f_{c}^{'} = \SI{5.5}{\kilo\hertz}$.
 
 %Needs to be placed here so it is in the left column and then on the bottom of the page
-\begin{figure*}[h]
+\begin{figure*}[t]
     \centering
     \resizebox{0.95\textwidth}{!}{
         \begin{tikzpicture}
@@ -335,10 +336,9 @@ caused by the convolution of the initial spectrum with the dirac delta impulse, 
             };
         \end{tikzpicture}
     }
-    \caption{Spectrum after bandpass sampling the DCF77 signal at $f_{s} = \SI{24}{\kilo\hertz}$}
+    \caption{Spectrum after bandpass sampling the DCF77 signal at $f_{s} = \SI{24}{\kilo\hertz}$. The original spectral parts are filled with blue dots.}
     \label{fig:dcf77_bp_spectrum}
 \end{figure*}
-\FloatBarrier
 
 \subsection{The Goertzel Algorithm}
 The standard approach to analyze a spectrum in the digital domain after sampling is the well-known Discrete Fourier Transform (DFT), implemented by using
@@ -431,9 +431,73 @@ With this simple example, it is already visible that the Goertzel algorithm can 
 It is therefore used to observe the DCF77 signal's amplitude over time by being executed periodically.
 As the gap of the encoded symbols is eiter \SI{100}{\milli\second} or \SI{200}{\milli\second} long, the duration of the analyzation set to \SI{10}{\milli\second} to provide a good tradeoff between resolution in time and a longest possible analyzation time
 to leverage the DFT gain.
-The result is then passed to a detector to obtain the binary time signal from the analyzed
-amplitude.
+The square roots of the results are taken to finally calculate the magnitude of the DCF77 signal's amplitude and then passed to a detector to obtain the binary time signal.
+Because of the duration of the analyzation being equal to \SI{10}{\milli\second}, the sampling rate after the Goertzel algorithm is equal to:
+\begin{equation}
+    f_{s,g} = \frac{1}{\SI{10}{\milli\second}} = \SI{100}{\hertz}
+\end{equation}
 
+\subsection{The detector}
+The output of the Goertzel algorithm is already following the waveform of the binary time signal but still includes fluctuations due to noise and fading.
+To reconstruct the original waveform of the binary time signal, it is processed inside a detector.
+As the values of the Goertzel algorithm will follow the pattern of the signal's amplitude being switched between \SI{15}{\percent} and \SI{100}, the detection can be done by comparing the current value to a threshold.
+Because of the Goertzel algorithm delivering absolute values, whose magnitude depend on the current receiving situation, a Exponential Moving Average is calculated and used to normalize the values by using (\ref{eqn:ema}).
+\begin{equation}
+    y[t] = \alpha \cdot x[t] + (1 - \alpha) \cdot y[t-1]
+    \label{eqn:ema}
+\end{equation}
+This part can also be represented as an IIR-structure:
+\begin{figure}[h]
+    \centering
+    \resizebox{0.4\textwidth}{!}{
+        \begin{tikzpicture}[auto, node distance=2cm]
+            %Defining a cross set for the multiplication elements
+            \tikzset{cross/.style={path picture={ 
+            \draw[black]
+            (path picture bounding box.south east) -- (path picture bounding box.north west) (path picture bounding box.south west) -- (path picture bounding box.north east);
+            }}}
+          
+            %Block styles
+            \tikzstyle{delay} = [draw, rectangle, minimum height=2em, minimum width=2em]
+            \tikzstyle{sum} = [draw, circle, minimum size=2em, node distance=1.5cm]
+            \tikzstyle{mult} = [draw, circle, minimum size=2em, node distance=1.5cm, cross]
+            \tikzstyle{state} = [draw, rectangle, rounded corners, minimum height=2em, minimum width=2em]
+            
+            %Nodes
+            \node at (-1.5, 0) (x) {$x[n]$};
+            \node[mult] at (0,0) (mult1) {};
+            \node[sum] at (1.5,0) (sum1) {+};
+            \node[mult] at (3,-2) (mult2) {};
+            \node[delay] at (4.5,-1) (del1) {$z^{-1}$};
+            \node at (6, 0) (y) {$y[n]$};
+
+            \draw[->] (x.east) -- (mult1.west);
+            \draw[->] (mult1.east) -- (sum1.west);
+            \draw[->] (sum1.east) -- (y.west);
+            \draw[->] (mult2.west) -- (1.5, -2) -- (sum1.south);
+            \draw[->] (del1.south) -- (4.5, -2) -- (mult2.east);
+            \draw[->] (4.5, 0) -- (del1.north);
+            \draw[->] (0, 0.75) -- (mult1.north);
+            \draw[->] (3, -1.25) -- (mult2.north);
+            \node at (0, 1) {$\alpha$};
+            \node at (3, -1) {$1 - \alpha$};
+            \node[draw, shape=circle, fill=black, scale=0.3] at (4.5,0) {};
+        \end{tikzpicture}
+    }
+    \caption{IIR representation of the Exponential Moving Average}
+    \label{fig:ema_iir}
+\end{figure}
+\FloatBarrier\noindent
+The value of the smoothing factor $\alpha$ was calculated to take the samples of the last \SI{10}{\second} into account:
+\begin{equation}
+    \begin{split}
+        \alpha &= \frac{2}{N + 1} = \frac{2}{\SI{10}{\second} \cdot f_{s,g} + 1}\\
+        &= \frac{2}{\SI{10}{\second} \cdot \SI{100}{\hertz} + 1} \approx 0.001998
+    \end{split}
+\end{equation}
+This provides a stable and slowly changing average, as it is putting more weight on the past samples and leaves minimal influence to the most recent sample.
+The decision is then done by comparing the current sample to a threshold calculated by multiplying the current value of the average with $0.575$ (the middle bewteen \SI{15}{\percent} and \SI{100}{\percent}) and a scaling factor of $\frac{1}{0.8725}$.
+The scaling factor is needed as the average percentage of time where the signal where is equal to \SI{100}{percent} is \SI{87.25}{\percent} (assuming an equal distribution between symbols representing a 1 and a 0).
 
 \subsection{Maintaining the Integrity of the Specifications}
 
