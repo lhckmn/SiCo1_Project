@@ -11,7 +11,7 @@ duration = 24; %Overall sampling duration in s (duration of the simulation)
 %AWGN-Channel parameters
 awgn_snr = -5; %SNR after the AWGN-channel in dB
 
-%Goertzel Macro parameters
+%Goertzel macro parameters
 goertzel_segment_duration = 0.01; %Duration of the Goertzel algorithm segment in s
 
 %Detector parameters
@@ -46,8 +46,8 @@ for i = 1:ceil(duration)
         time_code_signal = [time_code_signal, rect_duty_80];
     end
 end
-time_code_signal = time_code_signal(1:N_samples-1);
-time_code_signal = [zeros(1, 1), time_code_signal];
+time_code_signal = time_code_signal(1:N_samples-1); %Cutting to size
+time_code_signal = [zeros(1, 1), time_code_signal]; %Inserting a zero at the beginning
 
 %Creating the DCF77 signal by using Amplitude Modulation (carrier is reduced to 15% during the gap)
 dcf77_signal = (0.85*time_code_signal + 0.15) .* carrier_signal;
@@ -155,7 +155,7 @@ ylabel('Amplitude');
 
 subplot(7,1,2);
 plot(t, time_code_signal);
-title('Time-Code signal');
+title('Time-Code Signal');
 xlabel('Time (s)');
 ylabel('Amplitude');
 
@@ -175,20 +175,20 @@ subplot(7,1,5);
 stem(t_goertzel_segments_results, goertzel_segments_magnitudes);
 hold on;
 stairs(t_goertzel_segments_results, detector_threshold, 'Color', 'red');
-title('Result Goertzel algorithm and detector threshold');
+title('Result Goertzel algorithm and Detector Threshold');
 xlabel('Time (s)');
 ylabel('Magnitude');
 hold off;
 
 subplot(7,1,6);
 stairs(t_goertzel_segments_results, exp_mov_avg);
-title('Rolling average of the detector');
+title('EMA of the detector');
 xlabel('Time (s)');
 ylabel('Value');
 
 subplot(7,1,7);
 stairs(t_goertzel_segments_results, dcf77_reconstructed);
-title('Time-Code signal after detector');
+title('Time-Code Signal after detector');
 xlabel('Time (s)');
 ylabel('Value');
 
@@ -197,12 +197,12 @@ ylabel('Value');
 figure
 subplot(2, 1, 1);
 plot(fft_freq, dcf77_signal_fft);
-title('Amplitude Spectrum of the DCF77 signal');
+title('Amplitude Spectrum of the DCF77 Signal');
 xlabel('Frequency (Hz)');
 ylabel('20*log_{10}(|DCF77(f)|)');
 
 subplot(2, 1, 2);
 plot(fft_freq, dcf77_signal_noise_fft);
-title('Amplitude Spectrum of the DCF77 signal after AWGN-Channel');
+title('Amplitude Spectrum of the DCF77 Signal after AWGN-Channel');
 xlabel('Frequency (Hz)');
 ylabel('20*log_{10}(|DCF77_{AWGN}(f)|)');

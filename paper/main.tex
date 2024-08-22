@@ -442,7 +442,7 @@ Because of the duration of the analyzation being equal to \SI{10}{\milli\second}
 The output of the Goertzel algorithm is already following the waveform of the binary time signal but still includes fluctuations due to noise and fading.
 To reconstruct the original waveform of the binary time signal, it is processed inside a detector.
 As the values of the Goertzel algorithm will follow the pattern of the signal's amplitude being switched between \SI{15}{\percent} and \SI{100}{\percent}, the detection can be done by comparing the value of the current sample to a threshold.
-To compensate the changing of magnitude of the Goertzel algorithm's values that is caused by the current receiving situation, an Exponential Moving Average (EMA) is calculated by using \eqref{eqn:ema} and employed to create an adaptive threshold.
+To compensate the changing of magnitude of the Goertzel algorithm's values that is caused by the current receiving situation, an Exponential Moving Average (EMA) is calculated by using \eqref{eqn:ema} and employed to create an adaptive threshold \cite{b11}.
 \begin{equation}
     y[t] = \alpha \cdot x[t] + (1 - \alpha) \cdot y[t-1]
     \label{eqn:ema}
@@ -513,7 +513,10 @@ The whole simulation was divided into five sections to allow for a clear structu
     \item Detection Section
     \item FFT and Plot Section
 \end{enumerate}
+These sections will be discussed in the following.
 
+\subsection{Simulation Parameter Section}
+In the Simulation Parameter Section, 
 
 
 \section*{Acknowledgment}
@@ -534,5 +537,6 @@ acknowledgments in the unnumbered footnote on the first page.
 \bibitem{b10} F. Zaplata and M. Kasal, ``SDR Implementation for DCF77,'', 2013, IEEE Paper. [Online]. Available: https://ieeexplore.ieee.org/document/6530943
 \bibitem{b7} -, ``Goertzel algorithm,'' 2024, Wikipedia entry. [Online]. Available: https://en.wikipedia.org/wiki/Goertzel\_algorithm
 \bibitem{b8} K. Banks, ``The Goertzel Algorithm,'' 2002, Internet Article. [Online]. Available: https://courses.cs.washington.edu/courses/cse466/12au/calendar/Goertzel-EETimes.pdf
+\bibitem{b11} R. G. Lyons, ``Setting the 3-dB Cutoff Frequency of an Exponential Averager,'' 2012, Internet Article. [Online]. Available: https://www.dsprelated.com/showarticle/182.php
 \end{thebibliography}
 \end{document}
