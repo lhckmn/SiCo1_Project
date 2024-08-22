@@ -23,6 +23,7 @@
 \usepackage{cuted}
 \usepackage{stfloats}
 \usepackage{tabularray}
+\usepackage{matlab-prettifier}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -516,8 +517,20 @@ The whole simulation was divided into five sections to allow for a clear structu
 These sections will be discussed in the following.
 
 \subsection{Simulation Parameter Section}
-In the Simulation Parameter Section, 
+In the Simulation Parameter Section, static parameters for the following sections are defined.
+These include the sampling frequency $f_{s}$, the duration of the whole simulation, the wanted SNR that the signal should have after passing the Additive White Gaussian Noise (AWGN)-Channel, the duration of the Goertzel algorithm segments, and the time that should
+be taken into account by the EMA.
+By adjusting these parameters, the behavior of the receiver can be altered to, e.g. to simulate different receiving conditions.
 
+\subsection{Signal Creation Section}
+
+\begin{lstlisting}[style=Matlab-editor]
+    %Creating the DCF77 signal by using Amplitude Modulation (carrier is reduced to 15% during the gap)
+    dcf77_signal = (0.85*time_code_signal + 0.15) .* carrier_signal;
+    
+    %Add noise by passing the DCF77 signal through an AWGN-Channel
+    dcf77_signal_noise = awgn(dcf77_signal, awgn_snr, 'measured');
+\end{lstlisting}
 
 \section*{Acknowledgment}
 The preferred spelling of the word ``acknowledgment'' in America is without 
