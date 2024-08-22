@@ -5,17 +5,19 @@ clc;
 %% Simulation Parameter Section
 
 %Sampling parameters
-fs = 200e3; %Sampling frequency in Hz
-duration = 5; %Overall sampling duration in s (duration of the simulation)
+fs = 24e3; %Sampling frequency in Hz
+duration = 24; %Overall sampling duration in s (duration of the simulation)
 
 %AWGN-Channel parameters
-awgn_snr = -15; %SNR after the AWGN-channel in dB
+awgn_snr = -5; %SNR after the AWGN-channel in dB
 
 %Goertzel Macro parameters
 goertzel_segment_duration = 0.01; %Duration of the Goertzel algorithm segment in s
 
 %Detector parameters
-det_threshold = 0.15; %Threshold for the detector
+det_avg_time = 10; %Time of the Exponential Moving Average in s
+
+
 
 %% Signal Creation Section
 
@@ -30,21 +32,32 @@ fc = 77.5e3; %Storing the carrier frequency of the DCF77 transmitter in Hz (77.5
 carrier_signal = cos(2*pi*fc*t);
 
 %Time signal (square wave with frequency of 1Hz, 80% duty cycle, and a range from 0 to 1)
-time_code_signal = 0.5*(square(-2*pi*1*t, 80) + 1);
+one_samples_80 = round(0.8 * fs);
+one_samples_90 = round(0.9 * fs);
+
+rect_duty_80 = [zeros(1, fs - one_samples_80), ones(1, one_samples_80)]; %Rect, duty-cycle 80%, starting at 0
+rect_duty_90 = [zeros(1, fs - one_samples_90), ones(1, one_samples_90)]; %Rect, duty-cycle 90%, starting at 0
+
+time_code_signal = [];
+for i = 1:ceil(duration)
+    if mod(i, 3) == 0
+        time_code_signal = [time_code_signal, rect_duty_90];
+    else
+        time_code_signal = [time_code_signal, rect_duty_80];
+    end
+end
+time_code_signal = time_code_signal(1:N_samples-1);
+time_code_signal = [zeros(1, 1), time_code_signal];
 
 %Creating the DCF77 signal by using Amplitude Modulation (carrier is reduced to 15% during the gap)
 dcf77_signal = (0.85*time_code_signal + 0.15) .* carrier_signal;
-
-
-
-%% AWGN-Channel Section
 
 %Add noise by passing the DCF77 signal through an AWGN-Channel
 dcf77_signal_noise = awgn(dcf77_signal, awgn_snr, 'measured');
 
 
 
-%% Goertzel Section
+%% Goertzel Algoritm Section
 
 %Batch analysis parameters
 goertzel_segment_size = fs * goertzel_segment_duration; %Calculating the number of samples for one segment
@@ -52,20 +65,22 @@ goertzel_num_segments = duration / goertzel_segment_duration; %Calculating the n
 t_goertzel_segments_results = (1:goertzel_num_segments)*goertzel_segment_duration; %Create a time vector for the results for plotting
 
 %Goertzel parameters
-goertzel_k = round(fc * goertzel_segment_duration);
+goertzel_k = round(5500 * goertzel_segment_duration);
 goertzel_omega = 2 * pi * goertzel_k / goertzel_segment_size;
 goertzel_coeff = 2 * cos(goertzel_omega);
 
 %Initializing Goertzel variables and a vector to store the results
-s_prev = 0;
-s_prev2 = 0;
-goertzel_segments_results = zeros(1, goertzel_num_segments); %Vector for storing the results of the analysis of the segments 
+Q_0 = 0;
+Q_1 = 0;
+Q_2 = 0;
+goertzel_segments_magnitudes = zeros(1, goertzel_num_segments); %Vector for storing the results of the analysis of the segments 
 
-%Goertzel algorithm execution
+%Goertzel algorithm segment processing
 for seg = 1:goertzel_num_segments
     %Resetting the Goertzel variables
-    s_prev = 0;
-    s_prev2 = 0;
+    Q_0 = 0;
+    Q_1 = 0;
+    Q_2 = 0;
 
     %Calculating the start and end index of the samples to process
     index_start = (seg-1)*goertzel_segment_size + 1;
@@ -73,27 +88,36 @@ for seg = 1:goertzel_num_segments
     
     %Executing the Goertzel algorithm
     for j = index_start:index_end
-        s = dcf77_signal_noise(j) + goertzel_coeff * s_prev - s_prev2;
-        s_prev2 = s_prev;
-        s_prev = s;
+        Q_0 = Q_1 * goertzel_coeff - Q_2 + dcf77_signal_noise(j);
+        Q_2 = Q_1;
+        Q_1 = Q_0;
     end
-    %Calculating the power of the signal in the segment and storing the result in the vector
-    goertzel_segments_results(seg) = s_prev2^2 + s_prev^2 - goertzel_coeff * s_prev * s_prev2;
+    %Calculating the squared magnitude of fc in the segment and storing the result in the vector of segment results
+    goertzel_segments_magnitudes(seg) = sqrt(Q_1^2 + Q_2^2 - Q_1 * Q_2 * goertzel_coeff);
 end
 
 
 
 %% Detection Section
 
-%Normalize the results
-goertzel_segments_results_normalized = goertzel_segments_results / max(goertzel_segments_results);
-
-%Vector for storing the results of the analysis of the segments
+%Preparing vectors for the reconstructed signal and a rolling average 
+exp_mov_avg = zeros(1, goertzel_num_segments);
+detector_threshold = zeros(1, goertzel_num_segments);
 dcf77_reconstructed = zeros(1, goertzel_num_segments);
 
-%Looping over the segments and checking if value is below or above the threshold
+exp_mov_avg_alpha = 2 / (det_avg_time * (1 / goertzel_segment_duration) + 1);
+
 for seg = 1:goertzel_num_segments
-    if goertzel_segments_results_normalized(seg) > 0.15
+    %Calculating the Exponential Moving Average
+    if seg > 1
+        exp_mov_avg(seg) = (1 - exp_mov_avg_alpha) * exp_mov_avg(seg - 1) + exp_mov_avg_alpha * goertzel_segments_magnitudes(seg); %Calculate a weighted average otherwise
+    end
+
+    %Calculating the current threshold
+    detector_threshold(seg) = 0.575 * (1 / 0.8725) * exp_mov_avg(seg);
+
+    %Deciding by comparing sample to threshold
+    if goertzel_segments_magnitudes(seg) > detector_threshold(seg)
         dcf77_reconstructed(seg) = 1;
     else
         dcf77_reconstructed(seg) = 0;
@@ -102,24 +126,24 @@ end
 
 
 
-%% FFT Section
+%% FFT and Plot Section
 
+%Getting the number of samples and preparing a vector for the frequency axis
 fft_N = length(t); %Number of samples
 fft_freq = (-fft_N/2:fft_N/2-1)*(fs/fft_N); %Frequency vector
 
-
+%Creating a FFT of the DCF77 signal without noise
 dcf77_signal_fft = fft(dcf77_signal); %FFT of DCF77 signal
 dcf77_signal_fft = fftshift(dcf77_signal_fft); %Shifting FFT
 dcf77_signal_fft = dcf77_signal_fft / fft_N; %Adjusting FFT gain
 dcf77_signal_fft = 20*log10(abs(dcf77_signal_fft)); %Converting to logarithmic
 
+%Creating a FFT of the DCF77 signal with noise
 dcf77_signal_noise_fft = fft(dcf77_signal_noise); %FFT of DCF77 signal with noise
 dcf77_signal_noise_fft = fftshift(dcf77_signal_noise_fft); %Shifting FFT
 dcf77_signal_noise_fft = dcf77_signal_noise_fft / fft_N; %Adjusting FFT gain
 dcf77_signal_noise_fft = 20*log10(abs(dcf77_signal_noise_fft)); %Converting to logarithmic
 
-
-%% Plot Section
 
 %Time-Domain plots
 figure
@@ -148,22 +172,26 @@ xlabel('Time (s)');
 ylabel('Amplitude');
 
 subplot(7,1,5);
-stem(t_goertzel_segments_results, goertzel_segments_results);
-title('Result Goertzel algorithm');
+stem(t_goertzel_segments_results, goertzel_segments_magnitudes);
+hold on;
+stairs(t_goertzel_segments_results, detector_threshold, 'Color', 'red');
+title('Result Goertzel algorithm and detector threshold');
 xlabel('Time (s)');
-ylabel('Amplitude');
+ylabel('Magnitude');
+hold off;
 
 subplot(7,1,6);
-stem(t_goertzel_segments_results, goertzel_segments_results_normalized);
-title('Result Goertzel algorithm normalized');
+stairs(t_goertzel_segments_results, exp_mov_avg);
+title('Rolling average of the detector');
 xlabel('Time (s)');
-ylabel('Amplitude');
+ylabel('Value');
 
 subplot(7,1,7);
 stairs(t_goertzel_segments_results, dcf77_reconstructed);
 title('Time-Code signal after detector');
 xlabel('Time (s)');
-ylabel('Amplitude');
+ylabel('Value');
+
 
 %Frequency-Domain plots
 figure
@@ -177,4 +205,4 @@ subplot(2, 1, 2);
 plot(fft_freq, dcf77_signal_noise_fft);
 title('Amplitude Spectrum of the DCF77 signal after AWGN-Channel');
 xlabel('Frequency (Hz)');
-ylabel('20*log_{10}(|DCF77-AWGN(f)|)');
+ylabel('20*log_{10}(|DCF77_{AWGN}(f)|)');

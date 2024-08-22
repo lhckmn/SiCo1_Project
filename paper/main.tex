@@ -101,7 +101,7 @@ As the amplitude-modulated part allows simplistic receiver designs through its s
 and therefore a focus is put on explaining this part of the DCF77 signal. The following explainations in this paper therefore refer explicitly to the amplitude-modulated part.
 The time information, represented as a series of binary symbols, is modulated onto the carrier with a frequency of \SI{77.5}{\kilo\hertz} by using
 Amplitude-Shift Keying (ASK). Every symbol has the duration of exactly \SI{1}{\second}, with a part that is either \SI{100}{\milli\second} or \SI{200}{\milli\second}
-long where it has a value to zero.
+long where it has a value equal to 0.
 This the duration of this "gap" is used to encode respectively a 0 or a 1 and effectively switches the strength of the carrier between \SI{15}{\percent} and \SI{100}{\percent} \cite{b5}.
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.45\textwidth]{img/dcf77_symbol_encoding.png}}
@@ -110,7 +110,7 @@ This the duration of this "gap" is used to encode respectively a 0 or a 1 and ef
 \end{figure}
 \FloatBarrier\noindent
 To allow the detection of a new minute, the gap is left out between the last (59) second of the ongoing and the first (0) second of the next minute.
-By using this scheme, a dataframe consisting out \SI{59}{\Bit}, starting at second one, can be transmitted every minute.
+By using this scheme, a dataframe consisting out \SI{59}{\Bit}, starting at second 1, can be transmitted every minute.
 Bit \SIrange{0}{19}{} are used to send encrypted weather data, to notify the PTB in case of errors in the transmitter, to announce an upcoming
 switch to or from Daylight Saving Time (DST), to show if DST is currently enabled or not, and to announce an upcoming leap second \cite{b5}.
 As the decryption of the weather date requires a specialized third-party integrated circuit and the notification bit is only important for the PTB, these parts
@@ -224,7 +224,7 @@ positive and negative integer multiples of $f_{s}$ \cite{b9}.
 As the DCF77's signal fulfills the stated requirements after it is received by the tuned ferrite-rod antenna and therefore bandpass filtered, it qualifies for being bandpass sampled.
 Its center frequency $f_{c}$ lies at \SI{77.5}{\kilo\hertz} with a theoretical maximum bandwidth $B$ of \SI{2.4}{\kilo\hertz} \cite{b2}.
 The effective bandwidth is much smaller in reality but \SI{2.4}{\kilo\hertz} will be used for finding a proper sampling frequency to provide enough safety margin.
-With (\ref{eqn:fs}), a table containing possible ranges for $f_{s}$ can be created.
+With \eqref{eqn:fs}, a table containing possible ranges for $f_{s}$ can be created.
 \begin{table}[htbp]
     \caption{Possible ranges for $f_{s}$ with $f_{c} = \SI{77.5}{\kilo\hertz}$ and $B = \SI{2.4}{\kilo\hertz}$}
     \centering
@@ -250,18 +250,18 @@ With (\ref{eqn:fs}), a table containing possible ranges for $f_{s}$ can be creat
 \end{table}
 \FloatBarrier\noindent
 It is visible that with increasing values for $m$, the value of $f_{s}$ and also the distance between the lower and the upper boundaries are decreasing.
-At $m = 32$, the condition of (\ref{eqn:fs_b}) is violated and at $m = 32$ the condition of (\ref{eqn:fs}), making $m = 31$ the last valid range.
-Choosing a sampling rate can now be done from this table while.
+At $m = 32$, the condition of \eqref{eqn:fs_b} is violated and at $m = 32$ the condition of \eqref{eqn:fs}, making $m = 31$ the last valid range.
+Choosing a sampling rate can now be done with this table.
+\par
 A lower sampling rate effectively shrinks the requirements regarding computational power, memory size and the ADC's speed, but simultaneously decreases the
-distance between the lower and the upper boundaty of the sampling rate.
-This then leads to higher requirements regarding the correctness of the sampling rate.
-A choice providing a good tradeoff between these effects is $m = 7$ with $f_{s} = \SI{24}{\kilo\hertz}$, because it offers a distance of $\SI{2647}{\hertz}$
-the upper and lower boundary with the sampling frequency lying almost in the middle \cite{b10}.
+distance between the lower and the upper limits of the sampling rate.
+This then leads to higher requirements regarding the adherence to the exact sampling rate.
+A choice providing a good tradeoff between these effects $f_{s} = \SI{24}{\kilo\hertz}$ at $m = 7$, because it offers a distance of $\SI{2647}{\hertz}$ between the upper and lower limits with the sampling frequency lying almost in the middle \cite{b10}.
 The DCF77 signal is then, as visible in Fig. \ref{fig:dcf77_bp_spectrum}, downconverted and centered at
 \begin{equation}
     f_{c}^{'} = f_{c} - 3 \cdot f_{s} = \SI{77.5}{\kilo\hertz} - 3 \cdot \SI{24}{\kilo\hertz} = \SI{5.5}{\kilo\hertz}
 \end{equation}
-caused by the convolution of the initial spectrum with the dirac delta impulse, located at $-3 \cdot f_{s}$. 
+caused by the convolution of the initial spectrum with the dirac delta impulse located at $-3 \cdot f_{s}$. 
 The following block, the Goertzel algorithm, therefore needs to analyze the spectral component at $f_{c}^{'} = \SI{5.5}{\kilo\hertz}$.
 
 %Needs to be placed here so it is in the left column and then on the bottom of the page
@@ -343,16 +343,17 @@ The following block, the Goertzel algorithm, therefore needs to analyze the spec
 \subsection{The Goertzel Algorithm}
 The standard approach to analyze a spectrum in the digital domain after sampling is the well-known Discrete Fourier Transform (DFT), implemented by using
 the Fast Fourier Transform (FFT). This yields an analysis of the complete spectrum, producing $\frac{N}{2} + 1$ relevant results for equally distributed frequencies
-("frequency bins") within range from \SI{0}{\hertz} to $\frac{f_{s}}{2}$ where $N$ is the number of samples and $f_{s}$ the sampling frequency \cite{b6}.
-The signal strength, and therefore the binary time signal of the amplitude-modulated part, can then be examined by observing the value of the curresponding frequency bin
+("frequency bins") within a range from \SI{0}{\hertz} to $\frac{f_{s}}{2}$ where $N$ is the number of samples and $f_{s}$ is the sampling frequency \cite{b6}.
+The signal strength, and therefore the binary time signal of the amplitude-modulated part, can then be examined by observing the magnitude of the curresponding frequency bin
 over time. Because of only one frequency bin being relevant, it is obvious that a full FFT produces a lot of overhead and redundant calculation operations in this use-case. 
 This overhead can be avoided by using the Goertzel algorithm instead of the FFT, which is able to calculate the value of one specific frequency bin with a smaller
 amount of needed calculations.
-It was invented in 1958 by Gerald Goertzel and since then is most commonly used in the detection tones employed in Dual-tone Multi-frequency (DTMF) signaling \cite{b7}.
-The working principle of the algorithm can be percieved as a second-order Infinite Impulse Response (IIR) filter where the results $y[n-1]$ and $y[n-2]$ of the output $y[n]$
-are stored in states $Q_{1}$ and $Q_{2}$, so they are still available after the execution of the filter \cite{b8}.
+It was invented in 1958 by Gerald Goertzel and since then is most commonly used in the detection of tones employed in Dual-tone Multi-frequency (DTMF) signaling \cite{b7}.
+The working principle of the algorithm can be percieved as a second-order Infinite Impulse Response (IIR) filter (see \eqref{eqn:goertzel}) where the results $y[n-1]$ and $y[n-2]$ of the output $y[n]$
+are stored in the states $Q_{1}$ and $Q_{2}$, so they are still available after the execution of the filter \cite{b8}.
 \begin{equation}
     y[n] = x[n] + 2 \cdot cos(\omega_{g}) \cdot y[n-1] - y[n-2]
+    \label{eqn:goertzel}
 \end{equation}
 \begin{figure}[h]
     \centering
@@ -402,18 +403,18 @@ are stored in states $Q_{1}$ and $Q_{2}$, so they are still available after the 
             \node[draw, shape=circle, fill=black, scale=0.3] at (4,-4) {};
         \end{tikzpicture}
     }
-    \caption{IIR representation of the Goertzel algorithm without the final calculation of the squared magnitude}
+    \caption{Block diagram of the Goertzel algorithm without the final calculation of the squared magnitude}
     \label{fig:goertzel_iir}
 \end{figure}
 \FloatBarrier\noindent
 The system takes the input sequence $x[n]$ with length $N$ and is executed exactly $N$ times.
-After the execution, the squared magnitude of $f_{a}$, the frequency to be analyzed, inside $x[n]$ can be calculated using the two states $Q_{1}$ and $Q_{2}$:
+After the execution, the squared magnitude of $f_{a}$, the frequency to be analyzed inside $x[n]$, can be calculated using the values of the two states $Q_{1}$ and $Q_{2}$:
 \begin{equation}
     |X(f_{a})|^2 = Q_{1}^2 + Q_{2}^2 - Q_{1} \cdot Q_{2} \cdot 2 \cdot \cos(\omega_{g})
 \end{equation}
 The constant $2 \cdot cos(\omega_{g})$, often called the "Goertzel coefficient", is calculated before the execution and used to adapt the algorithm to the frequency to be analyzed.
 The Value of $\omega_{g}$ itself is calculated based on a integer number $k$ and $N$.
-The integer number $k$ is a rounded fraction based on $N$, the frequency to be analyzed $f_{a}$, and the the sampling frequency $f_{s}$.
+The integer number $k$ is a rounded fraction based on $N$, the frequency to be analyzed $f_{a}$, and the the sampling frequency $f_{s}$:
 \begin{equation}
     k = \left\lfloor \frac{N \cdot f_{a}}{f_{s}} \right\rceil
 \end{equation}
@@ -424,8 +425,8 @@ The integer number $k$ is a rounded fraction based on $N$, the frequency to be a
 \par
 Just as with the conventional FFT, the amount of needed calculations for executing the Goertzel algorithm is based on the number of samples.
 In total, $N + 1$ multiplications and $2 \cdot N + 2$ additions are needed, which can be seen from the formulas for the IIR-part and the final calculation of the squared magnitude.
-For example, a length of $N = 512$ requires in $513$ multiplications and $1026$ additions to calculate the squared magnitude of the desired frequency.
-In comparison, the typical radix-2 FFT, needs $\frac{N}{2} \cdot \log_{2}(N)$ complex multiplications and $N \cdot \log_{2}(N)$ complex additions. With $N = 512$ this would result in $2034$ complex multiplications and $4608$ complex additions.
+For example, a length of processing $N = 512$ samples requires in $513$ multiplications and $1026$ additions to calculate the squared magnitude of the desired frequency.
+In comparison, the typical radix-2 FFT, needs $\frac{N}{2} \cdot \log_{2}(N)$ complex multiplications and $N \cdot \log_{2}(N)$ complex additions to be completed. With $N = 512$ this would result in $2034$ complex multiplications and $4608$ complex additions.
 \par
 With this simple example, it is already visible that the Goertzel algorithm can reduce the amount of needed resources compared to a full FFT, when only one or a small amount of frequency bins should be analyzed.
 It is therefore used to observe the DCF77 signal's amplitude over time by being executed periodically.
@@ -440,13 +441,13 @@ Because of the duration of the analyzation being equal to \SI{10}{\milli\second}
 \subsection{The detector}
 The output of the Goertzel algorithm is already following the waveform of the binary time signal but still includes fluctuations due to noise and fading.
 To reconstruct the original waveform of the binary time signal, it is processed inside a detector.
-As the values of the Goertzel algorithm will follow the pattern of the signal's amplitude being switched between \SI{15}{\percent} and \SI{100}, the detection can be done by comparing the current value to a threshold.
-Because of the Goertzel algorithm delivering absolute values, whose magnitude depend on the current receiving situation, a Exponential Moving Average is calculated and used to normalize the values by using (\ref{eqn:ema}).
+As the values of the Goertzel algorithm will follow the pattern of the signal's amplitude being switched between \SI{15}{\percent} and \SI{100}{\percent}, the detection can be done by comparing the value of the current sample to a threshold.
+To compensate the changing of magnitude of the Goertzel algorithm's values that is caused by the current receiving situation, an Exponential Moving Average (EMA) is calculated by using \eqref{eqn:ema} and employed to create an adaptive threshold.
 \begin{equation}
     y[t] = \alpha \cdot x[t] + (1 - \alpha) \cdot y[t-1]
     \label{eqn:ema}
 \end{equation}
-This part can also be represented as an IIR-structure:
+This part can also be represented as a block diagram:
 \begin{figure}[h]
     \centering
     \resizebox{0.4\textwidth}{!}{
@@ -484,7 +485,7 @@ This part can also be represented as an IIR-structure:
             \node[draw, shape=circle, fill=black, scale=0.3] at (4.5,0) {};
         \end{tikzpicture}
     }
-    \caption{IIR representation of the Exponential Moving Average}
+    \caption{Block diagram showing the calculation of the EMA}
     \label{fig:ema_iir}
 \end{figure}
 \FloatBarrier\noindent
@@ -497,201 +498,30 @@ The value of the smoothing factor $\alpha$ was calculated to take the samples of
 \end{equation}
 This provides a stable and slowly changing average, as it is putting more weight on the past samples and leaves minimal influence to the most recent sample.
 The decision is then done by comparing the current sample to a threshold calculated by multiplying the current value of the average with $0.575$ (the middle bewteen \SI{15}{\percent} and \SI{100}{\percent}) and a scaling factor of $\frac{1}{0.8725}$.
-The scaling factor is needed as the average percentage of time where the signal where is equal to \SI{100}{percent} is \SI{87.25}{\percent} (assuming an equal distribution between symbols representing a 1 and a 0).
+The scaling factor is needed as the average percentage of time where the signal where is equal to \SI{100}{percent} is \SI{87.25}{\percent} (assuming an equal distribution between symbols representing a binary 1 and a 0).
+If the value of the current sample is above this threshold, it is treated as a 1.
+Otherwise it is treated as a 0.
+The series of ones and zeros is then following the waveform shown in Fig. \ref{fig:dcf77_symbol_encoding} and can be used to decode the current time. 
 
-\subsection{Maintaining the Integrity of the Specifications}
+\section{MATLAB Simulation of the Receiver}
+To verify and underline the working principle of the receiver, a simulation of the whole system was created using MATLAB.
+The whole simulation was divided into five sections to allow for a clear structure:
+\begin{enumerate}
+    \item Simulation Parameter Section
+    \item Signal Creation Section
+    \item Goertzel Algorithm Section
+    \item Detection Section
+    \item FFT and Plot Section
+\end{enumerate}
 
-The IEEEtran class file is used to format your paper and style the text. All margins, 
-column widths, line spaces, and text fonts are prescribed; please do not 
-alter them. You may note peculiarities. For example, the head margin
-measures proportionately more than is customary. This measurement 
-and others are deliberate, using specifications that anticipate your paper 
-as one part of the entire proceedings, and not as an independent document. 
-Please do not revise any of the current designations.
 
-\section{Prepare Your Paper Before Styling}
-Before you begin to format your paper, first write and save the content as a 
-separate text file. Complete all content and organizational editing before 
-formatting. Please note sections \ref{AA} to \ref{FAT} below for more information on 
-proofreading, spelling and grammar.
-
-Keep your text and graphic files separate until after the text has been 
-formatted and styled. Do not number text heads---{\LaTeX} will do that 
-for you.
-
-\subsection{Abbreviations and Acronyms}\label{AA}
-Define abbreviations and acronyms the first time they are used in the text, 
-even after they have been defined in the abstract. Abbreviations such as 
-IEEE, SI, MKS, CGS, ac, dc, and rms do not have to be defined. Do not use 
-abbreviations in the title or heads unless they are unavoidable.
-
-\subsection{Units}
-\begin{itemize}
-\item Use either SI (MKS) or CGS as primary units. (SI units are encouraged.) English units may be used as secondary units (in parentheses). An exception would be the use of English units as identifiers in trade, such as ``3.5-inch disk drive''.
-\item Avoid combining SI and CGS units, such as current in amperes and magnetic field in oersteds. This often leads to confusion because equations do not balance dimensionally. If you must use mixed units, clearly state the units for each quantity that you use in an equation.
-\item Do not mix complete spellings and abbreviations of units: ``Wb/m\textsuperscript{2}'' or ``webers per square meter'', not ``webers/m\textsuperscript{2}''. Spell out units when they appear in text: ``. . . a few henries'', not ``. . . a few H''.
-\item Use a zero before decimal points: ``0.25'', not ``.25''. Use ``cm\textsuperscript{3}'', not ``cc''.)
-\end{itemize}
-
-\subsection{Equations}
-Number equations consecutively. To make your 
-equations more compact, you may use the solidus (~/~), the exp function, or 
-appropriate exponents. Italicize Roman symbols for quantities and variables, 
-but not Greek symbols. Use a long dash rather than a hyphen for a minus 
-sign. Punctuate equations with commas or periods when they are part of a 
-sentence, as in:
-\begin{equation}
-a+b=\gamma\label{eq}
-\end{equation}
-
-Be sure that the 
-symbols in your equation have been defined before or immediately following 
-the equation. Use ``\eqref{eq}'', not ``Eq.~\eqref{eq}'' or ``equation \eqref{eq}'', except at 
-the beginning of a sentence: ``Equation \eqref{eq} is . . .''
-
-\subsection{\LaTeX-Specific Advice}
-
-Please use ``soft'' (e.g., \verb|\eqref{Eq}|) cross references instead
-of ``hard'' references (e.g., \verb|(1)|). That will make it possible
-to combine sections, add equations, or change the order of figures or
-citations without having to go through the file line by line.
-
-Please don't use the \verb|{eqnarray}| equation environment. Use
-\verb|{align}| or \verb|{IEEEeqnarray}| instead. The \verb|{eqnarray}|
-environment leaves unsightly spaces around relation symbols.
-
-Please note that the \verb|{subequations}| environment in {\LaTeX}
-will increment the main equation counter even when there are no
-equation numbers displayed. If you forget that, you might write an
-article in which the equation numbers skip from (17) to (20), causing
-the copy editors to wonder if you've discovered a new method of
-counting.
-
-{\BibTeX} does not work by magic. It doesn't get the bibliographic
-data from thin air but from .bib files. If you use {\BibTeX} to produce a
-bibliography you must send the .bib files. 
-
-{\LaTeX} can't read your mind. If you assign the same label to a
-subsubsection and a table, you might find that Table I has been cross
-referenced as Table IV-B3. 
-
-{\LaTeX} does not have precognitive abilities. If you put a
-\verb|\label| command before the command that updates the counter it's
-supposed to be using, the label will pick up the last counter to be
-cross referenced instead. In particular, a \verb|\label| command
-should not go before the caption of a figure or a table.
-
-Do not use \verb|\nonumber| inside the \verb|{array}| environment. It
-will not stop equation numbers inside \verb|{array}| (there won't be
-any anyway) and it might stop a wanted equation number in the
-surrounding equation.
-
-\subsection{Some Common Mistakes}\label{SCM}
-\begin{itemize}
-\item The word ``data'' is plural, not singular.
-\item The subscript for the permeability of vacuum $\mu_{0}$, and other common scientific constants, is zero with subscript formatting, not a lowercase letter ``o''.
-\item In American English, commas, semicolons, periods, question and exclamation marks are located within quotation marks only when a complete thought or name is cited, such as a title or full quotation. When quotation marks are used, instead of a bold or italic typeface, to highlight a word or phrase, punctuation should appear outside of the quotation marks. A parenthetical phrase or statement at the end of a sentence is punctuated outside of the closing parenthesis (like this). (A parenthetical sentence is punctuated within the parentheses.)
-\item A graph within a graph is an ``inset'', not an ``insert''. The word alternatively is preferred to the word ``alternately'' (unless you really mean something that alternates).
-\item Do not use the word ``essentially'' to mean ``approximately'' or ``effectively''.
-\item In your paper title, if the words ``that uses'' can accurately replace the word ``using'', capitalize the ``u''; if not, keep using lower-cased.
-\item Be aware of the different meanings of the homophones ``affect'' and ``effect'', ``complement'' and ``compliment'', ``discreet'' and ``discrete'', ``principal'' and ``principle''.
-\item Do not confuse ``imply'' and ``infer''.
-\item The prefix ``non'' is not a word; it should be joined to the word it modifies, usually without a hyphen.
-\item There is no period after the ``et'' in the Latin abbreviation ``et al.''.
-\item The abbreviation ``i.e.'' means ``that is'', and the abbreviation ``e.g.'' means ``for example''.
-\end{itemize}
-An excellent style manual for science writers is \cite{b7}.
-
-\subsection{Authors and Affiliations}\label{AAA}
-\textbf{The class file is designed for, but not limited to, six authors.} A 
-minimum of one author is required for all conference articles. Author names 
-should be listed starting from left to right and then moving down to the 
-next line. This is the author sequence that will be used in future citations 
-and by indexing services. Names should not be listed in columns nor group by 
-affiliation. Please keep your affiliations as succinct as possible (for 
-example, do not differentiate among departments of the same organization).
-
-\subsection{Identify the Headings}\label{ITH}
-Headings, or heads, are organizational devices that guide the reader through 
-your paper. There are two types: component heads and text heads.
-
-Component heads identify the different components of your paper and are not 
-topically subordinate to each other. Examples include Acknowledgments and 
-References and, for these, the correct style to use is ``Heading 5''. Use 
-``figure caption'' for your Figure captions, and ``table head'' for your 
-table title. Run-in heads, such as ``Abstract'', will require you to apply a 
-style (in this case, italic) in addition to the style provided by the drop 
-down menu to differentiate the head from the text.
-
-Text heads organize the topics on a relational, hierarchical basis. For 
-example, the paper title is the primary text head because all subsequent 
-material relates and elaborates on this one topic. If there are two or more 
-sub-topics, the next level head (uppercase Roman numerals) should be used 
-and, conversely, if there are not at least two sub-topics, then no subheads 
-should be introduced.
-
-\subsection{Figures and Tables}\label{FAT}
-\paragraph{Positioning Figures and Tables} Place figures and tables at the top and 
-bottom of columns. Avoid placing them in the middle of columns. Large 
-figures and tables may span across both columns. Figure captions should be 
-below the figures; table heads should appear above the tables. Insert 
-figures and tables after they are cited in the text. Use the abbreviation 
-``Fig.~\ref{fig}'', even at the beginning of a sentence.
-
-\begin{table}[htbp]
-\caption{Table Type Styles}
-\begin{center}
-\begin{tabular}{|c|c|c|c|}
-\hline
-\textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
-\cline{2-4} 
-\textbf{Head} & \textbf{\textit{Table column subhead}}& \textbf{\textit{Subhead}}& \textbf{\textit{Subhead}} \\
-\hline
-copy& More table copy$^{\mathrm{a}}$& &  \\
-\hline
-\multicolumn{4}{l}{$^{\mathrm{a}}$Sample of a Table footnote.}
-\end{tabular}
-\label{tab}
-\end{center}
-\end{table}
-
-Figure Labels: Use 8 point Times New Roman for Figure labels. Use words 
-rather than symbols or abbreviations when writing Figure axis labels to 
-avoid confusing the reader. As an example, write the quantity 
-``Magnetization'', or ``Magnetization, M'', not just ``M''. If including 
-units in the label, present them within parentheses. Do not label axes only 
-with units. In the example, write ``Magnetization (A/m)'' or ``Magnetization 
-\{A[m(1)]\}'', not just ``A/m''. Do not label axes with a ratio of 
-quantities and units. For example, write ``Temperature (K)'', not 
-``Temperature/K''.
 
 \section*{Acknowledgment}
-
 The preferred spelling of the word ``acknowledgment'' in America is without 
 an ``e'' after the ``g''. Avoid the stilted expression ``one of us (R. B. 
 G.) thanks $\ldots$''. Instead, try ``R. B. G. thanks$\ldots$''. Put sponsor 
 acknowledgments in the unnumbered footnote on the first page.
 
-\section*{References}
-
-Please number citations consecutively within brackets \cite{b1}. The 
-sentence punctuation follows the bracket \cite{b2}. Refer simply to the reference 
-number, as in \cite{b3}---do not use ``Ref. \cite{b3}'' or ``reference \cite{b3}'' except at 
-the beginning of a sentence: ``Reference \cite{b3} was the first $\ldots$''
-
-Number footnotes separately in superscripts. Place the actual footnote at 
-the bottom of the column in which it was cited. Do not put footnotes in the 
-abstract or reference list. Use letters for table footnotes.
-
-Unless there are six authors or more give all authors' names; do not use 
-``et al.''. Papers that have not been published, even if they have been 
-submitted for publication, should be cited as ``unpublished'' \cite{b4}. Papers 
-that have been accepted for publication should be cited as ``in press'' \cite{b5}. 
-Capitalize only the first word in a paper title, except for proper nouns and 
-element symbols.
-
-For papers published in translation journals, please give the English 
-citation first, followed by the original foreign-language citation \cite{b6}.
 
 \begin{thebibliography}{00}
 \bibitem{b1} -, ``DCF77,'' 2024, Wikipedia entry. [Online]. Available: https://de.wikipedia.org/wiki/DCF77
@@ -704,14 +534,5 @@ citation first, followed by the original foreign-language citation \cite{b6}.
 \bibitem{b10} F. Zaplata and M. Kasal, ``SDR Implementation for DCF77,'', 2013, IEEE Paper. [Online]. Available: https://ieeexplore.ieee.org/document/6530943
 \bibitem{b7} -, ``Goertzel algorithm,'' 2024, Wikipedia entry. [Online]. Available: https://en.wikipedia.org/wiki/Goertzel\_algorithm
 \bibitem{b8} K. Banks, ``The Goertzel Algorithm,'' 2002, Internet Article. [Online]. Available: https://courses.cs.washington.edu/courses/cse466/12au/calendar/Goertzel-EETimes.pdf
-%\bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
-%\bibitem{b4} K. Elissa, ``Title of paper if known,'' unpublished.
-%\bibitem{b5} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
-%\bibitem{b6} Y. Yorozu, M. Hirano, K. Oka, and Y. Tagawa, ``Electron spectroscopy studies on magneto-optical media and plastic substrate interface,'' IEEE Transl. J. Magn. Japan, vol. 2, pp. 740--741, August 1987 [Digests 9th Annual Conf. Magnetics Japan, p. 301, 1982].
-%\bibitem{b7} M. Young, The Technical Writer's Handbook. Mill Valley, CA: University Science, 1989.
-%\bibitem{b9} S. Liu, ``Wi-Fi Energy Detection Testbed (12MTC),'' 2023, gitHub repository. [Online]. Available: https://github.com/liustone99/Wi-Fi-Energy-Detection-Testbed-12MTC
-%\bibitem{b10} ``Treatment episode data set: discharges (TEDS-D): concatenated, 2006 to 2009.'' U.S. Department of Health and Human Services, Substance Abuse and Mental Health Services Administration, Office of Applied Studies, August, 2013, DOI:10.3886/ICPSR30122.v2
-%\bibitem{b11} K. Eves and J. Valasek, ``Adaptive control for singularly perturbed systems examples,'' Code Ocean, Aug. 2023. [Online]. Available: https://codeocean.com/capsule/4989235/tree
 \end{thebibliography}
-
 \end{document}
