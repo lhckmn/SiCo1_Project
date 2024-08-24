@@ -12,6 +12,7 @@ duration = 24; %Overall sampling duration in s (duration of the simulation)
 awgn_snr = -5; %SNR after the AWGN-channel in dB
 
 %Goertzel macro parameters
+goertzel_analyzation_freq = 5.5e3; %Analyzation frequency of the Goertzel algorithm in Hz
 goertzel_segment_duration = 0.01; %Duration of the Goertzel algorithm segment in s
 
 %Detector parameters
@@ -38,9 +39,10 @@ one_samples_90 = round(0.9 * fs);
 rect_duty_80 = [zeros(1, fs - one_samples_80), ones(1, one_samples_80)]; %Rect, duty-cycle 80%, starting at 0
 rect_duty_90 = [zeros(1, fs - one_samples_90), ones(1, one_samples_90)]; %Rect, duty-cycle 90%, starting at 0
 
+%Concatenating the symbols after each other to create the time code signal
 time_code_signal = [];
 for i = 1:ceil(duration)
-    if mod(i, 3) == 0
+    if mod(i, 2) == 0 %Alternating the symbols
         time_code_signal = [time_code_signal, rect_duty_90];
     else
         time_code_signal = [time_code_signal, rect_duty_80];
@@ -65,7 +67,7 @@ goertzel_num_segments = duration / goertzel_segment_duration; %Calculating the n
 t_goertzel_segments_results = (1:goertzel_num_segments)*goertzel_segment_duration; %Create a time vector for the results for plotting
 
 %Goertzel parameters
-goertzel_k = round(5500 * goertzel_segment_duration);
+goertzel_k = round(goertzel_analyzation_freq * goertzel_segment_duration);
 goertzel_omega = 2 * pi * goertzel_k / goertzel_segment_size;
 goertzel_coeff = 2 * cos(goertzel_omega);
 

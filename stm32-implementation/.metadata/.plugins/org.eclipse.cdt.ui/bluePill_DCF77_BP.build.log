@@ -1,0 +1,10 @@
+22:05:46 **** Incremental Build of configuration Debug for project bluePill_DCF77_BP ****
+make -j20 all 
+arm-none-eabi-size  bluePill_DCF77_BP.elf 
+   text	   data	    bss	    dec	    hex	filename
+  20708	    112	   3040	  23860	   5d34	bluePill_DCF77_BP.elf
+Finished building: default.size.stdout
+ 
+
+22:05:47 Build Finished. 0 errors, 0 warnings. (took 187ms)
+

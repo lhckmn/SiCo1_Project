@@ -505,8 +505,8 @@ If the value of the current sample is above this threshold, it is treated as a 1
 Otherwise it is treated as a 0.
 The series of ones and zeros is then following the waveform shown in Fig. \ref{fig:dcf77_symbol_encoding} and can be used to decode the current time. 
 
-\section{MATLAB Simulation of the Receiver}
-To verify and underline the working principle of the receiver, a simulation of the whole system was created using MATLAB.
+\section{Simulation of the receiver in MATLAB}
+To verify and further explain the working principle of the receiver, a simulation of the whole system was created using MATLAB.
 The whole simulation was divided into five sections to allow for a clear structure:
 \begin{enumerate}
     \item Simulation Parameter Section
@@ -518,12 +518,27 @@ The whole simulation was divided into five sections to allow for a clear structu
 These sections will be discussed in the following.
 
 \subsection{Simulation Parameter Section}
-In the Simulation Parameter Section, static parameters for the following sections are defined.
-These include the sampling frequency $f_{s}$, the duration of the whole simulation, the wanted SNR that the signal should have after passing the Additive White Gaussian Noise (AWGN)-Channel, the duration of the Goertzel algorithm segments, and the time that should
-be taken into account by the EMA.
-By adjusting these parameters, the behavior of the receiver can be altered to, e.g. to simulate different receiving conditions.
+In the Simulation Parameter Section, static parameters for the following sections of the simulation are defined.
+These include the sampling frequency $f_{s}$, the duration of the whole simulation, the SNR that the signal should have after passing the Additive White Gaussian Noise (AWGN)-Channel, the frequency to be analyzed by the Goertzel algoritm, the duration of the Goertzel algorithm segments, and the time that should be taken into account by the EMA.
+By adjusting these parameters, the receiving situation and the receiver's behavior can be altered to, e.g. to simulate different receiving conditions and examine the system's performance.
 
 \subsection{Signal Creation Section}
+The Signal Creation Section implements the creation of the amplitude-modulated DCF77 signal.
+First, a time vector with the length of the simulation's duration and a step size that depends on $f_{s}$ is created and its length stored in a variable.
+A vector containing the carrier signal at $f_{c} = \SI{77.5}{\kilo\hertz}$ by using this time vector is created afterwards.
+For the amplitude modulation of the carrier, the time code signal containing the binary encoded symbols needs to be created.
+As this signal is used for multiplication with the carrier, it needs to consist of rects with a period length of \SI{1}{\second} and a gap of either \SI{200}{\milli\second} or \SI{100}{\milli\second} at the beginning.
+These rects are prepared by creating and filling two vectors with the matching amount of zeros followed and filling the rest with ones.
+A vector containing the time code signal with alternating symbols is created by concatenating these vectors inside a for loop.
+The number of iterations is given by rounding up the simulation's duration, because each symbol has the duration of \SI{1}{\second}.
+The vector is then cut down afterwards to exactly match the length of the time vector and therefore the duration of the simulation.
+To finally create the DCF77 signal, the vector with the time code signal is scaled and multiplied element-wise with the vector containing the carrier signal.
+This signal is then passed through a AWGN-Channel, creating a signal with a defined SNR to allow the simulation of different receiving conditions.
+
+\subsection{Goertzel Algorithm Section}
+
+
+
 
 \begin{lstlisting}[style=Matlab-editor]
     %Creating the DCF77 signal by using Amplitude Modulation (carrier is reduced to 15% during the gap)
