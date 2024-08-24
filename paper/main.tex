@@ -413,15 +413,18 @@ The system takes the input sequence $x[n]$ with length $N$ and is executed exact
 After the execution, the squared magnitude of $f_{a}$, the frequency to be analyzed inside $x[n]$, can be calculated using the values of the two states $Q_{1}$ and $Q_{2}$:
 \begin{equation}
     |X(f_{a})|^2 = Q_{1}^2 + Q_{2}^2 - Q_{1} \cdot Q_{2} \cdot 2 \cdot \cos(\omega_{g})
+    \label{eqn:goertzel-mag}
 \end{equation}
 The constant $2 \cdot cos(\omega_{g})$, often called the "Goertzel coefficient", is calculated before the execution and used to adapt the algorithm to the frequency to be analyzed.
 The Value of $\omega_{g}$ itself is calculated based on a integer number $k$ and $N$.
 The integer number $k$ is a rounded fraction based on $N$, the frequency to be analyzed $f_{a}$, and the the sampling frequency $f_{s}$:
 \begin{equation}
     k = \left\lfloor \frac{N \cdot f_{a}}{f_{s}} \right\rceil
+    \label{eqn:goertzel-k}
 \end{equation}
 \begin{equation}
     w_g = \frac{2\pi \cdot k}{N}
+    \label{eqn:goertzel-omega}
 \end{equation}
 
 \par
@@ -536,8 +539,17 @@ To finally create the DCF77 signal, the vector with the time code signal is scal
 This signal is then passed through a AWGN-Channel, creating a signal with a defined SNR to allow the simulation of different receiving conditions.
 
 \subsection{Goertzel Algorithm Section}
-
-
+As described in the chapter explaining the receiver's working principle, the samples are processed in batches whose size is defined by the duration of the Goertzel algorithm's execution.
+Before its execution, the parameters needed for the segment-wise execution, such as the segment size, the number of segments, and a time vector containing the exact points in time where results were available (later used for plotting), are calculated based on the
+sampling rate $f_{s}$, and the pre-defined duration of analyzation.
+The parameters for the Goertzel algorithm itself, $k$, $\omega_{g}$ and $2 \cdot cos(\omega_{g})$ are then calculated by using the formulas \eqref{eqn:goertzel-k} and \eqref{eqn:goertzel-omega}.
+\par
+Three variables Q\_0, Q\_1, and Q\_2 for the implementation of the Goertzel algorithm's formula (see \eqref{eqn:goertzel} and \eqref{eqn:goertzel-mag}) and a vector for storing the segments' results are initialized.
+The segment-wise analyzation is then implemented by using an outer and an inner for-loop.
+The outer for-loop iterates over the number of segments, resetting Q\_0, Q\_1, and Q\_2 followed by calculating the index of the first and the last sample of the current segment, providing the limits for the inner for-loop.
+Inside the inner for-loop, the formula \eqref{eqn:goertzel} of the IIR-Part is implemented by calculating the new output of the structure and shifting the previous results for the next iteration.
+After all samples of the segment were processed, the magnitude is calculated by the implementation of \eqref{eqn:goertzel-mag} using the values stored in Q\_1 and Q\_2 and taking the square root of the result.
+The result is then stored inside the prepared vector for the segments' results.
 
 
 \begin{lstlisting}[style=Matlab-editor]
