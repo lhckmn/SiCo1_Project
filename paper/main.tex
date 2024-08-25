@@ -599,16 +599,23 @@ The time domain plots of Fig. \ref{fig:sim_td_m5dB} show the creation of the DCF
 The first plot shows the time code signal that should be retrieved back by the receiver to allow a visual verification that the DCF77 signal is modulated retrieved back correctly.
 It can be seen that each symbol has a length of \SI{1}{\second} with a gap of either \SI{200}{\milli\second} or \SI{100}{\milli\second} at the beginning.
 From the second plot, the amplitude can be seen to switch between $0.15$ and $1$, representing the changes between \SI{15}{\percent} and \SI{100}{\percent}.
-The third plot shows the DCF77 signal with added noise and an average amplitude of approximately $3.5$ with the orignal waveform not being visible anymore.
+The third plot shows the DCF77 signal with added noise and an average amplitude of approximately $3.6$ with the orignal waveform not being visible anymore.
 The fourth plot shows the results of the Goertzel algorithm segments together wit the value of the calculated threshold.
 The operation of the Goertzel algorithm can be verified, as the calculated magnitude of the frequency bin is clearly following the waveform of the time code signal.
 The value propagation of the threshold is as slow as expected with the value only experiencing minor drops during the gaps of the signal.
 A value where the detector starts to take valid decisions is reached after approximately \SI{5}{\second}.
 The threshold then approaches asymptotically the value where it is exactly located in the middle between the area of values representing an apmlitude of \SI{15}{\percent} and
 the area of values representing \SI{100}{\percent}.
+As the value of the EMA is proportional to the threshold, the plot is left out.
+In the fifth plot, the retrieved time code signal is visualized.
+It is obvious that the signal contains errors until the threshold has reached a level where valid decisions are taken by the detector.
+After \SI{5}{\second}, when the threshold reached this value, no more errors are visible.
+\par
+All simulation runs with a smaller SNR contained an increasing amount of errors, caused by the noise to raise or drop single points above or below the threshold, placing them in the
+area where they were detected to correspond to the opposite symbol.
+This effect can be imagined by thinking of the height of the area where the results are distributed by the noise is increased until both areas touch the threshold and start to overlap.
+Single points ending up in the other area are then interpreted as the wrong symbol. 
 
-
-All simulation runs with a smaller SNR contained an increasing amount of errors, caused by the noise to raise exceed the
 
 \begin{figure*}[!htbp]
     \centerline{\includegraphics[width=1.1\textwidth]{img/sim_td_m5dB.eps}}

@@ -171,25 +171,25 @@ ylabel('20*log_{10}(|DCF77_{AWGN}(f)|)');
 %Time domain plots
 figure
 
-subplot(6,1,1);
+subplot(5,1,1);
 plot(t, time_code_signal);
 title('Time-Code Signal');
 xlabel('Time (s)');
 ylabel('Amplitude');
 
-subplot(6,1,2);
+subplot(5,1,2);
 plot(t, dcf77_signal);
 title('DCF77 Signal');
 xlabel('Time (s)');
 ylabel('Amplitude');
 
-subplot(6,1,3);
+subplot(5,1,3);
 plot(t, dcf77_signal_noise);
 title('DCF77 Signal with noise');
 xlabel('Time (s)');
 ylabel('Amplitude');
 
-subplot(6,1,4);
+subplot(5,1,4);
 stem(t_goertzel_segments_results, goertzel_segments_magnitudes);
 hold on;
 stairs(t_goertzel_segments_results, detector_threshold, 'Color', 'red');
@@ -198,13 +198,13 @@ xlabel('Time (s)');
 ylabel('Magnitude');
 hold off;
 
-subplot(6,1,5);
-stairs(t_goertzel_segments_results, exp_mov_avg);
-title('EMA of the detector');
-xlabel('Time (s)');
-ylabel('Value');
+% subplot(5,1,5);
+% stairs(t_goertzel_segments_results, exp_mov_avg);
+% title('EMA of the detector');
+% xlabel('Time (s)');
+% ylabel('Value');
 
-subplot(6,1,6);
+subplot(5,1,5);
 stairs(t_goertzel_segments_results, dcf77_reconstructed);
 title('Time-Code Signal after detector');
 xlabel('Time (s)');
