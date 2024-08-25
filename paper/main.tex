@@ -500,9 +500,14 @@ The value of the smoothing factor $\alpha$ was calculated to take the samples of
         \alpha &= \frac{2}{N + 1} = \frac{2}{\SI{10}{\second} \cdot f_{s,g} + 1}\\
         &= \frac{2}{\SI{10}{\second} \cdot \SI{100}{\hertz} + 1} \approx 0.001998
     \end{split}
+    \label{eqn:ema-alpha}
 \end{equation}
 This provides a stable and slowly changing average, as it is putting more weight on the past samples and leaves minimal influence to the most recent sample.
-The decision is then done by comparing the current sample to a threshold calculated by multiplying the current value of the average with $0.575$ (the middle bewteen \SI{15}{\percent} and \SI{100}{\percent}) and a scaling factor of $\frac{1}{0.8725}$.
+The decision is then done by comparing the current sample to a threshold calculated by multiplying the current value of the average with $0.575$ (the middle bewteen \SI{15}{\percent} and \SI{100}{\percent}) and a scaling factor of $\frac{1}{0.8725}$:
+\begin{equation}
+    threshold = 0.575 \cdot \frac{1}{0.8725} \cdot y[t]
+    \label{eqn:thresh}
+\end{equation}
 The scaling factor is needed as the average percentage of time where the signal where is equal to \SI{100}{percent} is \SI{87.25}{\percent} (assuming an equal distribution between symbols representing a binary 1 and a 0).
 If the value of the current sample is above this threshold, it is treated as a 1.
 Otherwise it is treated as a 0.
@@ -539,26 +544,77 @@ To finally create the DCF77 signal, the vector with the time code signal is scal
 This signal is then passed through a AWGN-Channel, creating a signal with a defined SNR to allow the simulation of different receiving conditions.
 
 \subsection{Goertzel Algorithm Section}
-As described in the chapter explaining the receiver's working principle, the samples are processed in batches whose size is defined by the duration of the Goertzel algorithm's execution.
-Before its execution, the parameters needed for the segment-wise execution, such as the segment size, the number of segments, and a time vector containing the exact points in time where results were available (later used for plotting), are calculated based on the
-sampling rate $f_{s}$, and the pre-defined duration of analyzation.
+As described in the chapter explaining the receiver's working principle, the sampled DCF77 signal is processed in segments whose size is defined by the duration of the Goertzel algorithm's execution.
+Before processing the samples, the parameters needed for the segment-wise execution are prepared.
+These include the segment size, the number of segments, and a time vector containing the exact points in time where segments' results were available (later used for plotting).
 The parameters for the Goertzel algorithm itself, $k$, $\omega_{g}$ and $2 \cdot cos(\omega_{g})$ are then calculated by using the formulas \eqref{eqn:goertzel-k} and \eqref{eqn:goertzel-omega}.
 \par
-Three variables Q\_0, Q\_1, and Q\_2 for the implementation of the Goertzel algorithm's formula (see \eqref{eqn:goertzel} and \eqref{eqn:goertzel-mag}) and a vector for storing the segments' results are initialized.
+Three variables, Q\_0, Q\_1, and Q\_2, are initialized for the implementation of the Goertzel algorithm's formula (see \eqref{eqn:goertzel} and \eqref{eqn:goertzel-mag}) and vector for storing the segments' results is prepared.
 The segment-wise analyzation is then implemented by using an outer and an inner for-loop.
-The outer for-loop iterates over the number of segments, resetting Q\_0, Q\_1, and Q\_2 followed by calculating the index of the first and the last sample of the current segment, providing the limits for the inner for-loop.
-Inside the inner for-loop, the formula \eqref{eqn:goertzel} of the IIR-Part is implemented by calculating the new output of the structure and shifting the previous results for the next iteration.
-After all samples of the segment were processed, the magnitude is calculated by the implementation of \eqref{eqn:goertzel-mag} using the values stored in Q\_1 and Q\_2 and taking the square root of the result.
+The outer for-loop iterates over the number of segments, first resetting Q\_0, Q\_1, and Q\_2 followed by calculating the index of the first and the last sample of the current segment to provide the limits for the inner for-loop.
+Inside the inner for-loop, the formula \eqref{eqn:goertzel} of the IIR-Part is implemented by calculating the new output of the structure and shifting the previous results in each iteration.
+After all samples of the segment were processed (the inner for-loop finished), the magnitude is calculated by the implementation of \eqref{eqn:goertzel-mag}, using the values stored in Q\_1 and Q\_2 and taking the square root of the result.
 The result is then stored inside the prepared vector for the segments' results.
 
+\subsection{Detection Section}
+The Detection Section processes the Goertzel algorithm's results of the segments to retrieve back the time code signal.
+At the beginning, three vectors are initialized to store the value of the EMA, the detector's threshold, and the time code signal.
+The parameter $\alpha$ of the EMA is calculated by the implementation of \eqref{eqn:ema-alpha} and stored in a variable.
+The segments are then processed inside a for-loop.
+First, the EMA is calculated by the implementation of \eqref{eqn:ema} and stored inside a vector.
+Then, the threshold is calculated based on the value of the EMA and the scaling factor (see \eqref{eqn:thresh}) and stored inside a vector.
+The decision whether the result of the current section was caused by the signal's amplitude being equal to either \SI{15}{\percent} or
+\SI{100}{\percent} is done by comparing the value of the result to the calculated threshold.
+If the value is smaller than the threshold, it is assumed that it was caused by the transmitter's amplitude being equal to \SI{15}{\percent} and
+a 0 is stored in the vector of the reconstructed time code signal.
+If the value is bigger than the threshold, it is assumed that it was caused by the transmitter's amplitude being equal to \SI{100}{\percent} and a 1 is stored in the vector of the reconstructed time code signal.
 
-\begin{lstlisting}[style=Matlab-editor]
-    %Creating the DCF77 signal by using Amplitude Modulation (carrier is reduced to 15% during the gap)
-    dcf77_signal = (0.85*time_code_signal + 0.15) .* carrier_signal;
-    
-    %Add noise by passing the DCF77 signal through an AWGN-Channel
-    dcf77_signal_noise = awgn(dcf77_signal, awgn_snr, 'measured');
-\end{lstlisting}
+\subsection{FFT and Plot Section}
+To allow the a visualization and verification of the simulation's results, a section for plotting was added.
+This also includes two FFTs, analyzing signal before and after passing the AWGN-Channel to allow the obervation of the SNR.
+The FFTs are prepared before the plotting takes place by using MATLAB's internal functions for calculating and shifting the results.
+The scaling is adjusted to normalize the DFT gain and the logarithm of the results is calculated.
+Besides the calculation of the FFTs themselves, a vector containing the bins' frequencies is prepared for plotting.
+The results of the two FFTs are then plotted in figure.
+\par
+In a second figure, multiple time domain plots are arranged to allow the observation of the receiver's stages.
+These include plots of the time code signal, the DCF77 signal with and without noise, the results of the Goertzel algorithm's segments together with the threshold of the detector, the value of the EMA, and the reconstructed time-code signal.
+
+\subsection{Results}
+Multiple simulations with different values for the SNR starting from \SIrange{5}{-7}{\deci\bel} were executed to verify and evaluate the receiver's capabilities to reconstruct the DCF77's time code signal in different receiving conditions.
+From these simulations, the most relevant results occured in the case where the SNR was equal to \SI{-5}{\deci\bel}, because this was the lowest SNR where the reciver was still able to
+retrieve back the time code signal without errors.
+The frequency domain plots of the two FFTs, shown in Fig. \ref{fig:sim_fd_m5dB}, verify the DCF77 signal's aliases to show up exactly at \SI{\pm 5.5}{\kilo\hertz}.
+From the plot showing the DCF77 signal after passing the AWGN-channel, it can be seen that the noise floor is located at approximately \SI{-50}{\deci\bel} while the peaks
+of the DCF77 signaö have a value of approximately \SI{-8}{\deci\bel}.
+The difference of \SI{42}{\deci\bel} should not be confused with the SNR, as the power of the noise added by the AWGN-Channel is spread evenly over all frequencies.
+The correct SNR was verified to be exactly \SI{-5}{\deci\bel} by using MATLAB's built-in command "snr()" to calculate the SNR by comparing the before and after adding noise.
+\begin{figure}[!htbp]
+    \centerline{\includegraphics[width=0.4\textwidth]{img/sim_fd_m5dB.eps}}
+    \caption{Plots of the frequency domain at a SNR of \SI{-5}{\deci\bel}}
+    \label{fig:sim_fd_m5dB}
+\end{figure}
+\FloatBarrier
+The time domain plots of Fig. \ref{fig:sim_td_m5dB} show the creation of the DCF77 signal and the internal operation of the receiver.
+The first plot shows the time code signal that should be retrieved back by the receiver to allow a visual verification that the DCF77 signal is modulated retrieved back correctly.
+It can be seen that each symbol has a length of \SI{1}{\second} with a gap of either \SI{200}{\milli\second} or \SI{100}{\milli\second} at the beginning.
+From the second plot, the amplitude can be seen to switch between $0.15$ and $1$, representing the changes between \SI{15}{\percent} and \SI{100}{\percent}.
+The third plot shows the DCF77 signal with added noise and an average amplitude of approximately $3.5$ with the orignal waveform not being visible anymore.
+The fourth plot shows the results of the Goertzel algorithm segments together wit the value of the calculated threshold.
+The operation of the Goertzel algorithm can be verified, as the calculated magnitude of the frequency bin is clearly following the waveform of the time code signal.
+The value propagation of the threshold is as slow as expected with the value only experiencing minor drops during the gaps of the signal.
+A value where the detector starts to take valid decisions is reached after approximately \SI{5}{\second}.
+The threshold then approaches asymptotically the value where it is exactly located in the middle between the area of values representing an apmlitude of \SI{15}{\percent} and
+the area of values representing \SI{100}{\percent}.
+
+
+All simulation runs with a smaller SNR contained an increasing amount of errors, caused by the noise to raise exceed the
+
+\begin{figure*}[!htbp]
+    \centerline{\includegraphics[width=1.1\textwidth]{img/sim_td_m5dB.eps}}
+    \caption{Plots of the time domain at a SNR of \SI{-5}{\deci\bel}}
+    \label{fig:sim_td_m5dB}
+\end{figure*}
 
 \section*{Acknowledgment}
 The preferred spelling of the word ``acknowledgment'' in America is without 

@@ -6,7 +6,7 @@ clc;
 
 %Sampling parameters
 fs = 24e3; %Sampling frequency in Hz
-duration = 24; %Overall sampling duration in s (duration of the simulation)
+duration = 30; %Overall sampling duration in s (duration of the simulation)
 
 %AWGN-Channel parameters
 awgn_snr = -5; %SNR after the AWGN-channel in dB
@@ -57,6 +57,9 @@ dcf77_signal = (0.85*time_code_signal + 0.15) .* carrier_signal;
 %Add noise by passing the DCF77 signal through an AWGN-Channel
 dcf77_signal_noise = awgn(dcf77_signal, awgn_snr, 'measured');
 
+%Verifying SNR by measuring again
+snr_measured = snr(dcf77_signal, dcf77_signal_noise - dcf77_signal);
+
 
 
 %% Goertzel Algoritm Section
@@ -102,17 +105,20 @@ end
 
 %% Detection Section
 
-%Preparing vectors for the reconstructed signal and a rolling average 
+%Preparing vectors for the reconstructed signal and the Exponential Moving Average (EMA)
 exp_mov_avg = zeros(1, goertzel_num_segments);
 detector_threshold = zeros(1, goertzel_num_segments);
 dcf77_reconstructed = zeros(1, goertzel_num_segments);
 
+%Calculating the parameter alpha of the EMA
 exp_mov_avg_alpha = 2 / (det_avg_time * (1 / goertzel_segment_duration) + 1);
 
 for seg = 1:goertzel_num_segments
     %Calculating the Exponential Moving Average
-    if seg > 1
-        exp_mov_avg(seg) = (1 - exp_mov_avg_alpha) * exp_mov_avg(seg - 1) + exp_mov_avg_alpha * goertzel_segments_magnitudes(seg); %Calculate a weighted average otherwise
+    if seg == 1 %Check if it is the first segment
+        exp_mov_avg(seg) = exp_mov_avg_alpha * goertzel_segments_magnitudes(seg); %Adapt calulation as there is no element at index -1
+    else
+        exp_mov_avg(seg) = (1 - exp_mov_avg_alpha) * exp_mov_avg(seg - 1) + exp_mov_avg_alpha * goertzel_segments_magnitudes(seg); %Calculate EMA normally
     end
 
     %Calculating the current threshold
@@ -147,55 +153,7 @@ dcf77_signal_noise_fft = dcf77_signal_noise_fft / fft_N; %Adjusting FFT gain
 dcf77_signal_noise_fft = 20*log10(abs(dcf77_signal_noise_fft)); %Converting to logarithmic
 
 
-%Time-Domain plots
-figure
-subplot(7,1,1);
-plot(t, carrier_signal);
-title('Carrier Signal');
-xlabel('Time (s)');
-ylabel('Amplitude');
-
-subplot(7,1,2);
-plot(t, time_code_signal);
-title('Time-Code Signal');
-xlabel('Time (s)');
-ylabel('Amplitude');
-
-subplot(7,1,3);
-plot(t, dcf77_signal);
-title('DCF77 Signal');
-xlabel('Time (s)');
-ylabel('Amplitude');
-
-subplot(7,1,4);
-plot(t, dcf77_signal_noise);
-title('DCF77 Signal with noise');
-xlabel('Time (s)');
-ylabel('Amplitude');
-
-subplot(7,1,5);
-stem(t_goertzel_segments_results, goertzel_segments_magnitudes);
-hold on;
-stairs(t_goertzel_segments_results, detector_threshold, 'Color', 'red');
-title('Result Goertzel algorithm and Detector Threshold');
-xlabel('Time (s)');
-ylabel('Magnitude');
-hold off;
-
-subplot(7,1,6);
-stairs(t_goertzel_segments_results, exp_mov_avg);
-title('EMA of the detector');
-xlabel('Time (s)');
-ylabel('Value');
-
-subplot(7,1,7);
-stairs(t_goertzel_segments_results, dcf77_reconstructed);
-title('Time-Code Signal after detector');
-xlabel('Time (s)');
-ylabel('Value');
-
-
-%Frequency-Domain plots
+%Frequency domain plots
 figure
 subplot(2, 1, 1);
 plot(fft_freq, dcf77_signal_fft);
@@ -208,3 +166,46 @@ plot(fft_freq, dcf77_signal_noise_fft);
 title('Amplitude Spectrum of the DCF77 Signal after AWGN-Channel');
 xlabel('Frequency (Hz)');
 ylabel('20*log_{10}(|DCF77_{AWGN}(f)|)');
+
+
+%Time domain plots
+figure
+
+subplot(6,1,1);
+plot(t, time_code_signal);
+title('Time-Code Signal');
+xlabel('Time (s)');
+ylabel('Amplitude');
+
+subplot(6,1,2);
+plot(t, dcf77_signal);
+title('DCF77 Signal');
+xlabel('Time (s)');
+ylabel('Amplitude');
+
+subplot(6,1,3);
+plot(t, dcf77_signal_noise);
+title('DCF77 Signal with noise');
+xlabel('Time (s)');
+ylabel('Amplitude');
+
+subplot(6,1,4);
+stem(t_goertzel_segments_results, goertzel_segments_magnitudes);
+hold on;
+stairs(t_goertzel_segments_results, detector_threshold, 'Color', 'red');
+title('Result Goertzel algorithm and Detector Threshold');
+xlabel('Time (s)');
+ylabel('Magnitude');
+hold off;
+
+subplot(6,1,5);
+stairs(t_goertzel_segments_results, exp_mov_avg);
+title('EMA of the detector');
+xlabel('Time (s)');
+ylabel('Value');
+
+subplot(6,1,6);
+stairs(t_goertzel_segments_results, dcf77_reconstructed);
+title('Time-Code Signal after detector');
+xlabel('Time (s)');
+ylabel('Value');
