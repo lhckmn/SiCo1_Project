@@ -609,19 +609,47 @@ the area of values representing \SI{100}{\percent}.
 As the value of the EMA is proportional to the threshold, the plot is left out.
 In the fifth plot, the retrieved time code signal is visualized.
 It is obvious that the signal contains errors until the threshold has reached a level where valid decisions are taken by the detector.
-After \SI{5}{\second}, when the threshold reached this value, no more errors are visible.
+After \SI{5}{\second}, when the threshold reached this value, no more errors occured.
 \par
 All simulation runs with a smaller SNR contained an increasing amount of errors, caused by the noise to raise or drop single points above or below the threshold, placing them in the
 area where they were detected to correspond to the opposite symbol.
 This effect can be imagined by thinking of the height of the area where the results are distributed by the noise is increased until both areas touch the threshold and start to overlap.
 Single points ending up in the other area are then interpreted as the wrong symbol. 
 
-
 \begin{figure*}[!htbp]
     \centerline{\includegraphics[width=1.1\textwidth]{img/sim_td_m5dB.eps}}
     \caption{Plots of the time domain at a SNR of \SI{-5}{\deci\bel}}
     \label{fig:sim_td_m5dB}
 \end{figure*}
+
+\section{Demo implementation}
+The receiver's structure, shown in Fig. \ref{fig:block_diag_receiver}, was implemented on a STM32F103C8T6, an Arm Cortex-M3 microcontroller, to provide a brief proof of concept.
+To for an optical verification, the obtained time code signal is used to turn on and off a Light-Emitting Diode (LED), but this signal
+could also be used to decode the DCF77's transmitted time data.
+As a tuned antenna together with a pre-amplifier is needed to filter out the DCF77 signal and amplify it to a level where it can be measured by the microcontroller's internal ADC, a minimalistic circuit 
+consisting of a tank circuit tuned to \SI{77.5}{\kilo\hertz} and a two-stage transistor amplifier was built based on the circuit shown in \cite{b12}.
+The rest of the of the receiver's structure was implemented in software using C and single-precision floating-point for the caluclations.
+\par
+A timer was set up to create an internal Pulse Width Modulation (PWM) signal to trigger the conversion of the microcontroller's internal ADC at the sampling frequency of \SI{24}{\kilo\hertz}.
+The samples are transferred using circular Direct Memory Access (DMA) into a buffer of the size of $480$.
+This size was chosen because it is equal to twice the amount of samples that are needed for the analyzation of one segment.
+During runtime, the DMA hardware module fills this buffer and two interrupts are executed when the buffer was filled half way and when it is completely full.
+Because of the circular setup of the DMA, it fills the buffer continuously and wraps around back to the first address, after reaching the buffer's end.
+This allows a continuous operation of the application with a precise sampling frequency while eliminating the need to handle ADC conversions manually. 
+As a segment is ready to be analyzed with every interrupt, the operations needed to process the signal processing are executed inside this Interrupt Service Routine (ISR).
+The result of each segment after the detector is then used to turn on or off a General Purpose Input Output (GPIO) that is connected to a LED.
+\par
+Although its rather simplistic implementation, the demo implementation worked right away.
+The observed effect of the receiver to adapt to the current receiving conditions by first outputting wrong results because of a
+not matching threshold is also noticeable when running the demo application.
+After powerup and changes in the environment and therefore during the adaption of the threshold to its new value, the LED shows
+arrythmic behavior.
+This 
+
+
+The demo implementation worked right away, showing a good sensitivity 
+
+
 
 \section*{Acknowledgment}
 The preferred spelling of the word ``acknowledgment'' in America is without 
@@ -642,5 +670,6 @@ acknowledgments in the unnumbered footnote on the first page.
 \bibitem{b7} -, ``Goertzel algorithm,'' 2024, Wikipedia entry. [Online]. Available: \url{https://en.wikipedia.org/wiki/Goertzel_algorithm}
 \bibitem{b8} K. Banks, ``The Goertzel Algorithm,'' 2002, Internet Article. [Online]. Available: \url{https://courses.cs.washington.edu/courses/cse466/12au/calendar/Goertzel-EETimes.pdf}
 \bibitem{b11} R. G. Lyons, ``Setting the 3-dB Cutoff Frequency of an Exponential Averager,'' 2012, Internet Article. [Online]. Available: \url{https://www.dsprelated.com/showarticle/182.php}
+\bibitem{b12} -, ``ATTINY85 als DCF77-Empfänger,'' 2021, Board Entry. [Online]. Available: \url{https://www.mikrocontroller.net/topic/529477}
 \end{thebibliography}
 \end{document}
