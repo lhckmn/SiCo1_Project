@@ -640,16 +640,17 @@ As a segment is ready to be analyzed with every interrupt, the operations needed
 The result of each segment after the detector is then used to turn on or off a General Purpose Input Output (GPIO) that is connected to a LED.
 \par
 Although its rather simplistic implementation, the demo implementation worked right away.
-The observed effect of the receiver to adapt to the current receiving conditions by first outputting wrong results because of a
-not matching threshold is also noticeable when running the demo application.
-After powerup and changes in the environment and therefore during the adaption of the threshold to its new value, the LED shows
-arrythmic behavior.
-This 
+The behavior of the receiver that was observed in the simulation, first outputting a series of wrong results when adapting to the
+current receiving conditions, is also noticable when running the demo application.
+After powerup or changes in the environment and therefore during the stabilization of the threshold to its new value, the LED shows
+arrythmic behavior for approximately \SI{5}{\second} before the application continues to operate correctly.
+Other than that, the demo implementation shows that the presented principle also works in reality and that it can be implemented
+with low effort.
+Based on this structure, the code can be expanded to a full clock by decoding the information from the retrieved time code signal.
+The code is available in the paper's GitHub repository \cite{b13}.
 
-
-The demo implementation worked right away, showing a good sensitivity 
-
-
+\section{Summary}
+After the theoretical discussion, the simulation and the proof of concept  presented principle
 
 \section*{Acknowledgment}
 The preferred spelling of the word ``acknowledgment'' in America is without 
@@ -671,5 +672,6 @@ acknowledgments in the unnumbered footnote on the first page.
 \bibitem{b8} K. Banks, ``The Goertzel Algorithm,'' 2002, Internet Article. [Online]. Available: \url{https://courses.cs.washington.edu/courses/cse466/12au/calendar/Goertzel-EETimes.pdf}
 \bibitem{b11} R. G. Lyons, ``Setting the 3-dB Cutoff Frequency of an Exponential Averager,'' 2012, Internet Article. [Online]. Available: \url{https://www.dsprelated.com/showarticle/182.php}
 \bibitem{b12} -, ``ATTINY85 als DCF77-Empfänger,'' 2021, Board Entry. [Online]. Available: \url{https://www.mikrocontroller.net/topic/529477}
+\bibitem{b13} L. Hackmann, ``SiCo1\_Project,'' 2024, GitHub Repository. [Online]. Available: \url{https://github.com/lhckmn/SiCo1_Project}
 \end{thebibliography}
 \end{document}
