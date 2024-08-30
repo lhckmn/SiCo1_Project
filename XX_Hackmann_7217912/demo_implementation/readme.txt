@@ -1,0 +1,2 @@
+The project be opened by using the STM32CubeIDE (available online) and double clicking on the file "bluepill_DCF77_BP/.project".
+Relevant sourcecode is located under "bluepill_DCF77_BP/Core/Src/main.c".
