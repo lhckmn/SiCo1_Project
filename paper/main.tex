@@ -88,14 +88,13 @@ is shown.
 The DCF77 station operates in the long wave area at a frequency of \SI{77.5}{\kilo\hertz}.
 Its operation started with transmitting a frequency standard in 1959.
 In 1973, the transmission of the current time information was added to the signal by using amplitude modulation.
-To allow a reception under more challenging conditions and with a higher resolution and accuracy, the same time information is also added to the signal since 1983 by using
-phase-modulation \cite{b3}.
-The two different parts of the signal that result out of the parallel amplitude and the phase-modulation can be used for different use-cases that are separated by the
+To allow a reception under more challenging conditions and with a higher resolution and accuracy, the same time information is also transmitted by using phase modulation since 1983 \cite{b3}.
+The two different parts of the signal that result out of the parallel amplitude and phase modulation can be used for different use-cases that are separated by the
 requirements regarding the resolution, accuracy, and the reliability of the obtained time information. 
-Whereas the amplitude-modulated part is mainly used for general-purpose time application with low resolution requirements, the phase-modulated part is usually used
+Whereas the amplitude-modulated part is mainly used for general-purpose time applications with low resolution requirements, the phase-modulated part is usually used
 for specialized applications that require a higher resolution, accuracy, and reliability.
 Although being considered as low in comparison to what is achievable by analyzing the phase-modulated part, the usually observed accuracy uncertainity when using the
-amplitude-modulated part it is still well below \SI{1}{\second}, being \SI{100}{\milli\second} \cite{b2}.
+amplitude-modulated part it is still well below \SI{1}{\second}, being equal to \SI{100}{\milli\second} \cite{b2}.
 When using the phase-modulated part, a standard deviation of \SIrange{\pm 2}{\pm 22}{\micro\second} from the time of the atomic clock to the time of the receving device can be observed \cite{b4}.
 \par
 As the amplitude-modulated part allows simplistic receiver designs through its straightfoward modulation scheme, it is used in the principle presented in this paper
@@ -114,16 +113,16 @@ To allow the detection of a new minute, the gap is left out between the last (59
 By using this scheme, a dataframe consisting out \SI{59}{\Bit}, starting at second 1, can be transmitted every minute.
 Bit \SIrange{0}{19}{} are used to send encrypted weather data, to notify the PTB in case of errors in the transmitter, to announce an upcoming
 switch to or from Daylight Saving Time (DST), to show if DST is currently enabled or not, and to announce an upcoming leap second \cite{b5}.
-As the decryption of the weather date requires a specialized third-party integrated circuit and the notification bit is only important for the PTB, these parts
+As the decryption of the weather data requires a specialized third-party integrated circuit and the notification bit is only important for the PTB, these parts
 of the frame are discarded by most applications.
-The leftover Bits \SIrange{20}{58}{} are used to represent the current time and date in Binary Coded Decimal (BCD) format, including parity bits for recognizing errors.
+The leftover bits \SIrange{20}{58}{} are used to represent the current time and date in Binary Coded Decimal (BCD) format, including parity bits for recognizing errors.
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.35\textwidth]{img/dcf77_frame_encoding.jpg}}
     \caption{Data frame encoding of the DCF77 signal. From \cite{b5}}
     \label{fig:dcf77_data_encoding}
 \end{figure}
 \FloatBarrier\noindent
-This means that a receiver needs to run at least for \SI{39}{\second} after powerup to receive one whole block containing the current time information.
+Caused by this scheme, a receiver needs to run at least for \SI{39}{\second} after powerup to receive one whole block containing the current time information.
 In reality, this period is usually longer because the receiver needs to adapt to the current receiving conditions. 
 These conditions underly a lot of influences, including temporary fading, electromagnetic noise from the close environment or varying signal strengths
 during different times of the day.
@@ -132,11 +131,11 @@ during different times of the day.
 As seen in the description of the DCF77 signal, retrieving back the binary time signal from the amplitude-modulated part is more or less trivial.
 Conventional applications execute this task by using analog receiving circuits, usually by using a simple amplitude modulation receiver together with a
 tuned ferrite-rod antenna, acting as a Bandpass Filter (BPF), to filter out the irrelevant part of the spectrum. 
-Moving the receiver into the digital domain allows more advanced techniques to retrieve this binary time signal, rather than demodulating the signal with a
+Moving the receiver into the digital domain allows more advanced techniques to retrieve this binary time signal, rather than demodulating the RF-signal with a
 diode detector inside the amplitude modulation receiver.
 Because the information is contained only in the amplitude of the signal, and therefore inside the signal strength at the receiver, it can also be obtained by doing a
 continuous analysis of the spectrum at the carrier's frequency of \SI{77.5}{\kilo\hertz}.
-This task will be carried out by using the Goertzel algorithm, which is presented later.
+In the presented principle, this task will be carried out by using the Goertzel algorithm, which is introduced later.
 The structure of the whole receiver then simplifies to only two external hardware parts
 (besides the application processor) and four internal software parts.
 
@@ -180,10 +179,10 @@ The structure of the whole receiver then simplifies to only two external hardwar
 \end{figure}
 \FloatBarrier\noindent
 The tuned ferrite-rod antenna is kept to filter out the irrelevant spectral components, leaving only the DCF77's component at \SI{77.5}{\kilo\hertz}.
-This signal is then amplified by a RF amplifier and sampled at a certain sampling rate $f_{s}$ using the Analog to Digital Converter (ADC) of the application processsor.
+This signal is then amplified by an amplifier and sampled at a certain sampling rate $f_{s}$ using the Analog to Digital Converter (ADC) of the application processsor.
 A timer producing a frequency equal to $f_{s}$ is used to trigger the sampling.
 The samples are passed to the Goertzel algorithm to analyze the amplitude of the DCF77 signal.
-The result of the analyzation is then passed to a detector to reconstruct the binary time signal.
+The result of the analyzation is then passed to a detector to reconstruct the time code signal.
 \par
 Before discussing the simulation of the whole reciever, the internal parts executing the sampling, the spectral analysis and the detection are explained in more detail,
 as they use some special techniques that should be introduced and explained beforehand.
@@ -195,7 +194,7 @@ signal to be sampled:
 \begin{equation}
     f_{s} \geq 2 \cdot f_{h}
 \end{equation}
-Only when this condition is satisfied, the original signal can be reconstructed from the samples and it must be ensured that the signal contains no spectral elements
+Only when this condition is satisfied, the original signal can be reconstructed from the samples, so it must be ensured that the signal contains no spectral elements
 that might violate the condition \cite{b6}.
 This is usually done by filtering the signal through a lowpass before sampling.
 \par
@@ -224,8 +223,8 @@ positive and negative integer multiples of $f_{s}$ \cite{b9}.
 \par
 As the DCF77's signal fulfills the stated requirements after it is received by the tuned ferrite-rod antenna and therefore bandpass filtered, it qualifies for being bandpass sampled.
 Its center frequency $f_{c}$ lies at \SI{77.5}{\kilo\hertz} with a theoretical maximum bandwidth $B$ of \SI{2.4}{\kilo\hertz} \cite{b2}.
-The effective bandwidth is much smaller in reality but \SI{2.4}{\kilo\hertz} will be used for finding a proper sampling frequency to provide enough safety margin.
-With \eqref{eqn:fs}, a table containing possible ranges for $f_{s}$ can be created.
+The effective bandwidth is much smaller in reality but \SI{2.4}{\kilo\hertz} will be used for finding a proper sampling frequency while providing enough safety margin.
+With \eqref{eqn:fs}, a table containing possible ranges for $f_{s}$ was be created:
 \begin{table}[htbp]
     \caption{Possible ranges for $f_{s}$ with $f_{c} = \SI{77.5}{\kilo\hertz}$ and $B = \SI{2.4}{\kilo\hertz}$}
     \centering
@@ -257,7 +256,7 @@ Choosing a sampling rate can now be done with this table.
 A lower sampling rate effectively shrinks the requirements regarding computational power, memory size and the ADC's speed, but simultaneously decreases the
 distance between the lower and the upper limits of the sampling rate.
 This then leads to higher requirements regarding the adherence to the exact sampling rate.
-A choice providing a good tradeoff between these effects $f_{s} = \SI{24}{\kilo\hertz}$ at $m = 7$, because it offers a distance of $\SI{2647}{\hertz}$ between the upper and lower limits with the sampling frequency lying almost in the middle \cite{b10}.
+A choice providing a good tradeoff between these effects is $f_{s} = \SI{24}{\kilo\hertz}$ at $m = 7$, because it offers a distance of $\SI{2647}{\hertz}$ between the upper and lower limits with the sampling frequency lying almost in the middle \cite{b10}.
 The DCF77 signal is then, as visible in Fig. \ref{fig:dcf77_bp_spectrum}, downconverted and centered at
 \begin{equation}
     f_{c}^{'} = f_{c} - 3 \cdot f_{s} = \SI{77.5}{\kilo\hertz} - 3 \cdot \SI{24}{\kilo\hertz} = \SI{5.5}{\kilo\hertz}
@@ -337,7 +336,7 @@ The following block, the Goertzel algorithm, therefore needs to analyze the spec
             };
         \end{tikzpicture}
     }
-    \caption{Spectrum after bandpass sampling the DCF77 signal at $f_{s} = \SI{24}{\kilo\hertz}$. The original spectral parts are filled with blue dots.}
+    \caption{Spectrum after bandpass sampling the DCF77 signal at $f_{s} = \SI{24}{\kilo\hertz}$. The original spectral parts are filled with blue dots}
     \label{fig:dcf77_bp_spectrum}
 \end{figure*}
 
@@ -345,7 +344,7 @@ The following block, the Goertzel algorithm, therefore needs to analyze the spec
 The standard approach to analyze a spectrum in the digital domain after sampling is the well-known Discrete Fourier Transform (DFT), implemented by using
 the Fast Fourier Transform (FFT). This yields an analysis of the complete spectrum, producing $\frac{N}{2} + 1$ relevant results for equally distributed frequencies
 ("frequency bins") within a range from \SI{0}{\hertz} to $\frac{f_{s}}{2}$ where $N$ is the number of samples and $f_{s}$ is the sampling frequency \cite{b6}.
-The signal strength, and therefore the binary time signal of the amplitude-modulated part, can then be examined by observing the magnitude of the curresponding frequency bin
+The signal strength, and therefore the time code signal of the amplitude-modulated part, can then be examined by observing the magnitude of the corresponding frequency bin
 over time. Because of only one frequency bin being relevant, it is obvious that a full FFT produces a lot of overhead and redundant calculation operations in this use-case. 
 This overhead can be avoided by using the Goertzel algorithm instead of the FFT, which is able to calculate the value of one specific frequency bin with a smaller
 amount of needed calculations.
@@ -415,7 +414,7 @@ After the execution, the squared magnitude of $f_{a}$, the frequency to be analy
     \label{eqn:goertzel-mag}
 \end{equation}
 The constant $2 \cdot cos(\omega_{g})$, often called the "Goertzel coefficient", is calculated before the execution and used to adapt the algorithm to the frequency to be analyzed.
-The Value of $\omega_{g}$ itself is calculated based on a integer number $k$ and $N$.
+The value of $\omega_{g}$ itself is calculated based on an integer number $k$ and the number of samples $N$.
 The integer number $k$ is a rounded fraction based on $N$, the frequency to be analyzed $f_{a}$, and the the sampling frequency $f_{s}$:
 \begin{equation}
     k = \left\lfloor \frac{N \cdot f_{a}}{f_{s}} \right\rceil
@@ -428,11 +427,11 @@ The integer number $k$ is a rounded fraction based on $N$, the frequency to be a
 
 \par
 Just as with the conventional FFT, the amount of needed calculations for executing the Goertzel algorithm is based on the number of samples.
-In total, $N + 1$ multiplications and $2 \cdot N + 2$ additions are needed, which can be seen from the formulas for the IIR-part and the final calculation of the squared magnitude.
+In total, $N + 1$ multiplications and $2 \cdot N + 2$ additions are needed, which can be seen from the formulas of the IIR-part and the final calculation of the squared magnitude.
 For example, a length of processing $N = 512$ samples requires in $513$ multiplications and $1026$ additions to calculate the squared magnitude of the desired frequency.
 In comparison, the typical radix-2 FFT, needs $\frac{N}{2} \cdot \log_{2}(N)$ complex multiplications and $N \cdot \log_{2}(N)$ complex additions to be completed. With $N = 512$ this would result in $2034$ complex multiplications and $4608$ complex additions.
 \par
-With this simple example, it is already visible that the Goertzel algorithm can reduce the amount of needed resources compared to a full FFT, when only one or a small amount of frequency bins should be analyzed.
+With this simple example, it is already visible that the Goertzel algorithm can reduce the amount of needed resources compared to a full FFT, when only one or a small number of frequency bins should be analyzed.
 It is therefore used to observe the DCF77 signal's amplitude over time by being executed periodically.
 As the gap of the encoded symbols is eiter \SI{100}{\milli\second} or \SI{200}{\milli\second} long, the duration of the analyzation is set to \SI{10}{\milli\second} to provide a good tradeoff between resolution in time and a longest possible analyzation time
 to leverage the DFT gain.
@@ -446,7 +445,7 @@ Because of the duration of the analyzation being equal to \SI{10}{\milli\second}
 The output of the Goertzel algorithm is already following the waveform of the binary time signal but still includes fluctuations due to noise and fading.
 To reconstruct the original waveform of the binary time signal, it is processed inside a detector.
 As the values of the Goertzel algorithm will follow the pattern of the signal's amplitude being switched between \SI{15}{\percent} and \SI{100}{\percent}, the detection can be done by comparing the value of the current sample to a threshold.
-To compensate the changing of magnitude of the Goertzel algorithm's values that is caused by the current receiving situation, an Exponential Moving Average (EMA) is calculated by using \eqref{eqn:ema} and employed to create an adaptive threshold \cite{b11}.
+To compensate the changing of magnitude of the Goertzel algorithm's values that is caused by the current receiving situation, an Exponential Moving Average (EMA) is calculated by using \eqref{eqn:ema} and employed to create an adaptive threshold \cite{b11}:
 \begin{equation}
     y[t] = \alpha \cdot x[t] + (1 - \alpha) \cdot y[t-1]
     \label{eqn:ema}
@@ -507,14 +506,14 @@ The decision is then done by comparing the current sample to a threshold calcula
     threshold = 0.575 \cdot \frac{1}{0.8725} \cdot y[t]
     \label{eqn:thresh}
 \end{equation}
-The scaling factor is needed as the average percentage of time where the signal where is equal to \SI{100}{percent} is \SI{87.25}{\percent} (assuming an equal distribution between symbols representing a binary 1 and a 0).
+The scaling factor is needed as the average percentage of time where the signal's amplitude is equal to \SI{100}{\percent} is \SI{87.25}{\percent} (assuming an equal distribution between symbols representing a binary 0 and a 1).
 If the value of the current sample is above this threshold, it is treated as a 1.
 Otherwise it is treated as a 0.
-The series of ones and zeros is then following the waveform shown in Fig. \ref{fig:dcf77_symbol_encoding} and can be used to decode the current time. 
+The series of ones and zeros produced by the detector is then following the waveform shown in Fig. \ref{fig:dcf77_symbol_encoding} and can be used to decode the current time. 
 
 \section{Simulation of the receiver in MATLAB}
 To verify and further explain the working principle of the receiver, a simulation of the whole system was created using MATLAB.
-The whole simulation was divided into five sections to allow for a clear structure:
+The simulation was divided into five sections to allow for a clear structure:
 \begin{enumerate}
     \item Simulation Parameter Section
     \item Signal Creation Section
@@ -525,22 +524,23 @@ The whole simulation was divided into five sections to allow for a clear structu
 These sections will be discussed in the following.
 
 \subsection{Simulation Parameter Section}
-In the Simulation Parameter Section, static parameters for the following sections of the simulation are defined.
-These include the sampling frequency $f_{s}$, the duration of the whole simulation, the SNR that the signal should have after passing the Additive White Gaussian Noise (AWGN)-Channel, the frequency to be analyzed by the Goertzel algoritm, the duration of the Goertzel algorithm segments, and the time that should be taken into account by the EMA.
-By adjusting these parameters, the receiving situation and the receiver's behavior can be altered to, e.g. to simulate different receiving conditions and examine the system's performance.
+In the Simulation Parameter Section, static parameters for the other sections of the simulation are defined.
+These include the sampling frequency $f_{s}$, the duration of the whole simulation, the SNR that the signal should have after passing an Additive White Gaussian Noise (AWGN)-Channel, the frequency to be analyzed by the Goertzel algoritm, the duration of the Goertzel algorithm segments, and the time that should be taken into account by the EMA.
+By adjusting these parameters, the receiving situation and the receiver's behavior can be altered to simulate different receiving conditions and examine the system's performance.
 
 \subsection{Signal Creation Section}
 The Signal Creation Section implements the creation of the amplitude-modulated DCF77 signal.
-First, a time vector with the length of the simulation's duration and a step size that depends on $f_{s}$ is created and its length stored in a variable.
-A vector containing the carrier signal at $f_{c} = \SI{77.5}{\kilo\hertz}$ by using this time vector is created afterwards.
-For the amplitude modulation of the carrier, the time code signal containing the binary encoded symbols needs to be created.
+First, a time vector with the length of the simulation's duration and a step size that depends on $f_{s}$ is created and its length is stored in a variable.
+A vector containing the carrier signal at $f_{c} = \SI{77.5}{\kilo\hertz}$ is created afterwards by using this time vector.
+For the amplitude modulation of the carrier, the time code signal containing the binary encoded symbols also needs to be created.
 As this signal is used for multiplication with the carrier, it needs to consist of rects with a period length of \SI{1}{\second} and a gap of either \SI{200}{\milli\second} or \SI{100}{\milli\second} at the beginning.
-These rects are prepared by creating and filling two vectors with the matching amount of zeros followed and filling the rest with ones.
+These rects are prepared by creating and filling two vectors with the matching amount of zeros and the rest of the vector's length with ones.
 A vector containing the time code signal with alternating symbols is created by concatenating these vectors inside a for loop.
-The number of iterations is given by rounding up the simulation's duration, because each symbol has the duration of \SI{1}{\second}.
+The number of iterations is given by rounding up the simulation's duration.
+This is needed because each symbol has the duration of \SI{1}{\second}.
 The vector is then cut down afterwards to exactly match the length of the time vector and therefore the duration of the simulation.
 To finally create the DCF77 signal, the vector with the time code signal is scaled and multiplied element-wise with the vector containing the carrier signal.
-This signal is then passed through a AWGN-Channel, creating a signal with a defined SNR to allow the simulation of different receiving conditions.
+This signal is then passed through an AWGN-Channel, creating a signal with a defined SNR to allow the simulation of different receiving conditions.
 
 \subsection{Goertzel Algorithm Section}
 As described in the chapter explaining the receiver's working principle, the sampled DCF77 signal is processed in segments whose size is defined by the duration of the Goertzel algorithm's execution.
@@ -550,9 +550,9 @@ The parameters for the Goertzel algorithm itself, $k$, $\omega_{g}$ and $2 \cdot
 \par
 Three variables, Q\_0, Q\_1, and Q\_2, are initialized for the implementation of the Goertzel algorithm's formula (see \eqref{eqn:goertzel} and \eqref{eqn:goertzel-mag}) and vector for storing the segments' results is prepared.
 The segment-wise analyzation is then implemented by using an outer and an inner for-loop.
-The outer for-loop iterates over the number of segments, first resetting Q\_0, Q\_1, and Q\_2 followed by calculating the index of the first and the last sample of the current segment to provide the limits for the inner for-loop.
-Inside the inner for-loop, the formula \eqref{eqn:goertzel} of the IIR-Part is implemented by calculating the new output of the structure and shifting the previous results in each iteration.
-After all samples of the segment were processed (the inner for-loop finished), the magnitude is calculated by the implementation of \eqref{eqn:goertzel-mag}, using the values stored in Q\_1 and Q\_2 and taking the square root of the result.
+The outer for-loop iterates over the number of segments, first resetting Q\_0, Q\_1, and Q\_2 followed by calculating the index of the first and the last sample of the current segment to provide the inner for-loop's limits.
+Inside the inner for-loop, the formula \eqref{eqn:goertzel} of the IIR-Part is implemented by calculating the new output of the structure and shifting the previous results in each iteration through Q\_1 and Q\_2.
+After all samples of the segment were processed (the inner for-loop finished), the magnitude is calculated by the implementation of \eqref{eqn:goertzel-mag}, using the values stored in Q\_1 and Q\_2 and by taking the square root of the result.
 The result is then stored inside the prepared vector for the segments' results.
 
 \subsection{Detection Section}
@@ -562,7 +562,7 @@ The parameter $\alpha$ of the EMA is calculated by the implementation of \eqref{
 The segments are then processed inside a for-loop.
 First, the EMA is calculated by the implementation of \eqref{eqn:ema} and stored inside a vector.
 Then, the threshold is calculated based on the value of the EMA and the scaling factor (see \eqref{eqn:thresh}) and stored inside a vector.
-The decision whether the result of the current section was caused by the signal's amplitude being equal to either \SI{15}{\percent} or
+The decision whether the result of the current segment was caused by the signal's amplitude being equal to either \SI{15}{\percent} or
 \SI{100}{\percent} is done by comparing the value of the result to the calculated threshold.
 If the value is smaller than the threshold, it is assumed that it was caused by the transmitter's amplitude being equal to \SI{15}{\percent} and
 a 0 is stored in the vector of the reconstructed time code signal.
@@ -574,20 +574,20 @@ This also includes two FFTs, analyzing signal before and after passing the AWGN-
 The FFTs are prepared before the plotting takes place by using MATLAB's internal functions for calculating and shifting the results.
 The scaling is adjusted to normalize the DFT gain and the logarithm of the results is calculated.
 Besides the calculation of the FFTs themselves, a vector containing the bins' frequencies is prepared for plotting.
-The results of the two FFTs are then plotted in figure.
+The results of the two FFTs are then plotted in a figure.
 \par
 In a second figure, multiple time domain plots are arranged to allow the observation of the receiver's stages.
-These include plots of the time code signal, the DCF77 signal with and without noise, the results of the Goertzel algorithm's segments together with the threshold of the detector, the value of the EMA, and the reconstructed time-code signal.
+These include plots of the time code signal, the DCF77 signal with and without noise, the results of the Goertzel algorithm's segments together with the threshold of the detector, and the reconstructed time-code signal.
 
 \subsection{Results}
 Multiple simulations with different values for the SNR starting from \SIrange{5}{-7}{\deci\bel} were executed to verify and evaluate the receiver's capabilities to reconstruct the DCF77's time code signal in different receiving conditions.
-From these simulations, the most relevant results occured in the case where the SNR was equal to \SI{-5}{\deci\bel}, because this was the lowest SNR where the reciver was still able to
+From these simulations, the most relevant results occured in the case where the SNR was equal to \SI{-5}{\deci\bel}, because this was identified to be the lowest SNR where the receiver was still able to
 retrieve back the time code signal without errors.
 The frequency domain plots of the two FFTs, shown in Fig. \ref{fig:sim_fd_m5dB}, verify the DCF77 signal's aliases to show up exactly at \SI{\pm 5.5}{\kilo\hertz}.
 From the plot showing the DCF77 signal after passing the AWGN-channel, it can be seen that the noise floor is located at approximately \SI{-50}{\deci\bel} while the peaks
 of the DCF77 signal have a value of approximately \SI{-8}{\deci\bel}.
 The difference of \SI{42}{\deci\bel} should not be confused with the SNR, as the power of the noise added by the AWGN-Channel is spread evenly over all frequencies.
-The correct SNR was verified to be exactly \SI{-5}{\deci\bel} by using MATLAB's built-in command "snr()" to calculate the SNR by comparing the before and after adding noise.
+The SNR was verified to be exactly \SI{-5}{\deci\bel} by using MATLAB's built-in command "snr()" to calculate the SNR by comparing the signal before and after adding noise.
 \begin{figure}[!htbp]
     \centerline{\includegraphics[width=0.4\textwidth]{img/sim_fd_m5dB.eps}}
     \caption{Frequency domain plots of the simulation run with a SNR of \SI{-5}{\deci\bel}}
@@ -595,15 +595,15 @@ The correct SNR was verified to be exactly \SI{-5}{\deci\bel} by using MATLAB's 
 \end{figure}
 \FloatBarrier
 The time domain plots of Fig. \ref{fig:sim_td_m5dB} show the creation of the DCF77 signal and the internal operation of the receiver.
-The first plot shows the time code signal that should be retrieved back by the receiver to allow a visual verification that the DCF77 signal is modulated retrieved back correctly.
+The first plot shows the time code signal to allow a visual verification that the DCF77 signal is modulated and retrieved back correctly.
 It is visible that each symbol has the expected length of \SI{1}{\second} with a gap of either \SI{200}{\milli\second} or \SI{100}{\milli\second} at the beginning.
 From the second plot, the amplitude can be seen switching between $0.15$ and $1$, representing the changes between \SI{15}{\percent} and \SI{100}{\percent}.
-The third plot shows the DCF77 signal with added noise and an average amplitude of approximately $3.6$ with the orignal waveform not being visible anymore.
-The fourth plot shows the results of the Goertzel algorithm segments together wit the value of the calculated threshold.
+The third plot shows the DCF77 signal with added noise and an average amplitude of approximately $3.6$ while the orignal waveform is not being visible anymore.
+The fourth plot shows the results of the Goertzel algorithm's segments together with the value of the calculated threshold.
 The operation of the Goertzel algorithm can be verified, as the calculated magnitude of the frequency bin is clearly following the waveform of the time code signal.
 The value propagation of the threshold is as slow as expected with the value only experiencing minor drops during the gaps of the signal.
 A value where the detector starts to take valid decisions is reached after approximately \SI{5}{\second}.
-The threshold then approaches asymptotically the value where it is exactly located in the middle between the area of values representing an apmlitude of \SI{15}{\percent} and
+The threshold then asymptotically approaches the value where it is exactly located in the middle between the area of values representing an amplitude of \SI{15}{\percent} and
 the area of values representing \SI{100}{\percent}.
 As the value of the EMA is proportional to the threshold, the plot is left out.
 In the fifth plot, the retrieved time code signal is visualized.
@@ -611,9 +611,9 @@ It is obvious that the signal contains errors until the threshold has reached a 
 After \SI{5}{\second}, when the threshold reached this value, no more errors occured.
 \par
 All simulation runs with a smaller SNR contained an increasing amount of errors, caused by the noise to raise or drop single points above or below the threshold, placing them in the
-area where they were detected to correspond to the opposite symbol.
-This effect can be imagined by thinking of the height of the area where the results are distributed by the noise is increased until both areas touch the threshold and start to overlap.
-Single points ending up in the other area are then interpreted as the wrong symbol. 
+area where they were assumed by the detector to correspond to the opposite symbol.
+This effect can be imagined by thinking of the height of the area where the results are distributed by the noise to be increased until both areas touch the threshold and begin to overlap.
+Single points can then end up in the other area and are interpreted as the wrong symbol. 
 
 \begin{figure*}[!htbp]
     \centerline{\includegraphics[width=1.1\textwidth]{img/sim_td_m5dB.eps}}
@@ -622,30 +622,30 @@ Single points ending up in the other area are then interpreted as the wrong symb
 \end{figure*}
 
 \section{Demo implementation}
-The receiver's structure, shown in Fig. \ref{fig:block_diag_receiver}, was implemented on a STM32F103C8T6, an Arm Cortex-M3 microcontroller, to provide a brief proof of concept.
+The receiver's structure of Fig. \ref{fig:block_diag_receiver} was implemented on a STM32F103C8T6, an Arm Cortex-M3 microcontroller, to provide a brief proof of concept.
 For an optical verification, the obtained time code signal is used to turn on and off a Light-Emitting Diode (LED), but this signal
-could also be used to decode the DCF77's transmitted time data.
+could also already be used to decode the DCF77's transmitted time data.
 As a tuned antenna together with a pre-amplifier is needed to filter out the DCF77 signal and amplify it to a level where it can be measured by the microcontroller's internal ADC, a minimalistic circuit 
 consisting of a tank circuit tuned to \SI{77.5}{\kilo\hertz} and a two-stage transistor amplifier was built based on the circuit shown in \cite{b12}.
-The rest of the of the receiver's structure was implemented in software using C and single-precision floating-point for the caluclations.
+The rest of the of the receiver's structure was implemented in software using C and single-precision floating-point arithmetics for the caluclations.
 \par
 A timer was set up to create an internal Pulse Width Modulation (PWM) signal to trigger the conversion of the microcontroller's internal ADC at the sampling frequency of \SI{24}{\kilo\hertz}.
-The samples are transferred using circular Direct Memory Access (DMA) into a buffer of the size of $480$.
+The samples are transferred into a buffer of the size of $480$ using Direct Memory Access (DMA) in circular mode.
 This size was chosen because it is equal to twice the amount of samples that are needed for the analyzation of one segment.
-During runtime, the DMA hardware module fills this buffer and two interrupts are executed when the buffer was filled half way and when it is completely full.
-Because of the circular setup of the DMA, it fills the buffer continuously and wraps around back to the first address, after reaching the buffer's end.
-This allows a continuous operation of the application with a precise sampling frequency while eliminating the need to handle ADC conversions manually. 
-As a segment is ready to be analyzed with every interrupt, the operations needed to process the signal processing are executed inside this Interrupt Service Routine (ISR).
+During runtime, the DMA hardware module fills this buffer and two interrupts are executed when the buffer is filled half way and when it is completely full.
+Because of the circular setup of the DMA, the hardware module fills the buffer continuously and wraps around back to the first address, after reaching the buffer's end.
+This allows a continuous operation of the application with a precise sampling frequency while eliminating the need to handle the ADC conversions manually. 
+As a segment is ready to be analyzed with every interrupt, the operations needed to process the signal processing are executed inside the corresponding Interrupt Service Routine (ISR).
 The result of each segment after the detector is then used to turn on or off a General Purpose Input Output (GPIO) that is connected to a LED.
 \par
 Although its rather simplistic implementation, the demo implementation worked right away.
 The behavior of the receiver that was observed in the simulation, first outputting a series of wrong results when adapting to the
 current receiving conditions, is also noticable when running the demo application.
 After powerup or changes in the environment and therefore during the stabilization of the threshold to its new value, the LED shows
-arrythmic behavior for approximately \SI{5}{\second} before the application continues to operate correctly.
+arrythmic behavior for approximately \SI{5}{\second} before the application continues to operate stable and correctly.
 Other than that, the demo implementation shows that the presented principle also works in reality and that it can be implemented
 with low effort.
-Based on this structure, the code can be expanded to a full clock by decoding the information from the retrieved time code signal.
+Based on this structure, the code could be expanded to a full clock by decoding the information from the retrieved time code signal.
 The code is available in the paper's GitHub repository \cite{b13}.
 
 \section{Conclusion}
@@ -657,7 +657,7 @@ As all algorithms were designed to require a minimum of resources, the principle
 
 \section*{Acknowledgment}
 This work was inspired by a project that was published by an anonymous author in a german forum about electronics (see \cite{b12}).
-The autor of this paper, L. Hackmann, wants to thank for the knowledge and ideas that were provided through freely accessible entries.
+The autor of this paper, L. Hackmann, wants to thank for the knowledge and ideas that were provided through the freely accessible entries of this online discussion.
 
 \Urlmuskip=0mu plus 1mu
 \begin{thebibliography}{00}
